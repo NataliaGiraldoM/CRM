@@ -1,0 +1,10 @@
+{
+  "name": "orbit-access-tests",
+  "private": true,
+  "scripts": {
+    "test": "node access.integration.cjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.12"
+  }
+}

@@ -44,7 +44,7 @@ export default function Register() {
       console.log("Registration successful:", result);
       
       // Redirigir a login después del registro exitoso
-      navigate("/login");
+      navigate("/login?registered=1");
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Registration failed";

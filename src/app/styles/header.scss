@@ -290,3 +290,13 @@ body {
     width: 100%;
   }
 }
+/* Three equally styled navigation destinations, including audit. */
+.crm-header__nav {flex-wrap: wrap;}
+@media (max-width: 1250px) and (min-width: 1025px) {
+ .crm-header__container {flex-wrap:wrap;}
+ .crm-header__actions {margin-left:auto;}
+}
+@media (max-width:640px) {
+ .crm-header__nav {gap:6px;}
+ .crm-header__nav-item {flex:1;min-width:90px;width:auto;padding:0 10px;gap:7px;font-size:.85rem;border-radius:12px;}
+}

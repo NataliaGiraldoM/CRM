@@ -11,6 +11,8 @@ export interface LoginData {
 }
 
 export interface User {
+  role: "admin" | "viewer";
+  status: "active" | "pending" | "inactive";
   id: string;
   name: string;
   email: string;
@@ -42,7 +44,7 @@ export class AuthService {
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => { throw new Error(`HTTP ${response.status}: API returned an empty response. Check backend and Vite proxy.`); });
 
       if (!response.ok) {
         throw new Error(result.message || 'Registration failed');
@@ -68,7 +70,7 @@ export class AuthService {
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => { throw new Error(`HTTP ${response.status}: API returned an empty response. Check backend and Vite proxy.`); });
 
       if (!response.ok) {
         throw new Error(result.message || 'Login failed');

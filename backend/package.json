@@ -7,7 +7,9 @@
     "dev": "ts-node-dev src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:migrate": "node dist/scripts/setup.js migrate",
+    "admin:bootstrap": "node dist/scripts/setup.js bootstrap"
   },
   "keywords": [],
   "author": "",

@@ -2,7 +2,7 @@ import LanguageSwitcher from "../components/LanguageSwitcher";
 import { useLanguage } from "../../i18n/LanguageContext";
 import React, { useState } from "react";
 import { Building2, Lock, Mail } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthService, type LoginData } from "../../services/auth.service";
 
 export default function Login() {
@@ -12,6 +12,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +67,7 @@ export default function Login() {
           </div>
 
           <div className="card-body">
+            {params.get("registered") === "1" && <p role="status">{t("Account created. Wait for administrator approval before signing in.")}</p>}
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
                 <label htmlFor="email" className="form-label">

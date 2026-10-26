@@ -1,8 +1,10 @@
+import { api } from "../../services/access.service";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useEffect, useRef, useState } from "react";
 import {
   Cloud,
+  ShieldCheck,
   LayoutGrid,
   Users,
   CircleUserRound,
@@ -32,16 +34,12 @@ export default function Header() {
     setIsMenuOpen(false);
   };
 
-  const handleGoCustomers = () => {
-    setIsMenuOpen(false);
-    navigate("/customers");
-  };
-
   const handleEditProfile = () => {
     setIsMenuOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await api("/auth/logout", {method:"POST"}); } catch { /* Clear the local session even if the network fails. */ }
     setIsMenuOpen(false);
 
     if (typeof AuthService.clearAuthData === "function") {
@@ -116,6 +114,13 @@ export default function Header() {
               <Users size={20} />
               <span>{t("Customers")}</span>
             </NavLink>
+            {user?.role === "admin" && (
+              <NavLink to="/users" onClick={handleCloseMenu}
+                className={({ isActive }) => `crm-header__nav-item ${isActive ? "is-active" : ""}`}>
+                <ShieldCheck size={20} aria-hidden="true" />
+                <span>{t("Audit")}</span>
+              </NavLink>
+            )}
           </nav>
 
           <div className="crm-header__profile-wrapper" ref={menuRef}>

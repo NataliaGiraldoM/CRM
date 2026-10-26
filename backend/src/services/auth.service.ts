@@ -1,145 +1,33 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { pool } from '../config/db';
-import { UserResponse, CreateUserRequest } from '../models/user.model';
+import { CreateUserRequest } from '../models/user.model';
 import { validatePassword, validateName, validateEmail } from '../utils/validation.util';
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  message: string;
-  user: UserResponse;
-  token: string;
-}
-
+import { transaction, event, publicUser } from './access.service';
 export class AuthService {
-  static async register(userData: CreateUserRequest): Promise<UserResponse> {
-    const nameValidation = validateName(userData.name);
-    if (!nameValidation.isValid) {
-      throw new Error(nameValidation.message);
-    }
-
-    const emailValidation = validateEmail(userData.email);
-    if (!emailValidation.isValid) {
-      throw new Error(emailValidation.message);
-    }
-
-    const passwordValidation = validatePassword(userData.password);
-    if (!passwordValidation.isValid) {
-      throw new Error(passwordValidation.message);
-    }
-
-    const normalizedEmail = userData.email.trim().toLowerCase();
-    const normalizedName = userData.name.trim();
-
-    const existingUserResult = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [normalizedEmail]
-    );
-
-    if (existingUserResult.rows.length > 0) {
-      throw new Error('User with this email already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
-    const userId = uuidv4();
-
-    const insertResult = await pool.query(
-      `
-      INSERT INTO users (id, full_name, email, password_hash)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, full_name, email
-      `,
-      [userId, normalizedName, normalizedEmail, hashedPassword]
-    );
-
-    const createdUser = insertResult.rows[0];
-
-    return {
-      id: createdUser.id,
-      name: createdUser.full_name,
-      email: createdUser.email,
-    };
-  }
-
-  static async getAllUsers(): Promise<UserResponse[]> {
-    const result = await pool.query(
-      `
-      SELECT id, full_name, email
-      FROM users
-      ORDER BY created_at DESC
-      `
-    );
-
-    return result.rows.map((user) => ({
-      id: user.id,
-      name: user.full_name,
-      email: user.email,
-    }));
-  }
-
-  static async login(loginData: LoginRequest): Promise<LoginResponse> {
-    const emailValidation = validateEmail(loginData.email);
-    if (!emailValidation.isValid) {
-      throw new Error(emailValidation.message);
-    }
-
-    if (!loginData.password || loginData.password.trim() === '') {
-      throw new Error('Password is required');
-    }
-
-    const normalizedEmail = loginData.email.trim().toLowerCase();
-
-    const result = await pool.query(
-      `
-      SELECT id, full_name, email, password_hash
-      FROM users
-      WHERE email = $1
-      `,
-      [normalizedEmail]
-    );
-
-    if (result.rows.length === 0) {
-      throw new Error('Invalid credentials');
-    }
-
-    const user = result.rows[0];
-
-    const isPasswordValid = await bcrypt.compare(
-      loginData.password,
-      user.password_hash
-    );
-
-    if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
-    }
-
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET is not defined');
-    }
-
-    const token = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-      },
-      jwtSecret,
-      { expiresIn: '1d' }
-    );
-
-    return {
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.full_name,
-        email: user.email,
-      },
-      token,
-    };
-  }
+ static async register(data: CreateUserRequest) {
+  if(!data || typeof data.name!=='string'||typeof data.email!=='string'||typeof data.password!=='string')throw new Error('Missing required fields');
+  for(const check of [validateName(data.name),validateEmail(data.email),validatePassword(data.password)])if(!check.isValid)throw new Error(check.message);
+  const hash=await bcrypt.hash(data.password,12);
+  return transaction(null,'Self-registration: pending approval',async db=>{
+   try {const result=await db.query("INSERT INTO users(id,full_name,email,password_hash,role,status) VALUES($1,$2,$3,$4,'viewer','pending') RETURNING *",[randomUUID(),data.name.trim(),data.email.trim().toLowerCase(),hash]);return publicUser(result.rows[0]);}
+   catch(e:any){if(e.code==='23505')throw new Error('User with this email already exists');throw e;}
+  });
+ }
+ static async login(data: {email:string,password:string}) {
+  if(!data||typeof data.email!=='string'||typeof data.password!=='string')throw new Error('Invalid credentials');
+  const result=await pool.query('SELECT * FROM users WHERE email=$1',[data.email.trim().toLowerCase()]);const user=result.rows[0];
+  const valid=user&&await bcrypt.compare(data.password,user.password_hash);
+  if(!valid){await transaction(user?.id||null,'Invalid credentials',db=>event(db,user?.id||null,'LOGIN_FAILED',user?.id||null,'Invalid credentials'));throw new Error('Invalid credentials');}
+  const secret=process.env.JWT_SECRET;if(!secret)throw new Error('JWT_SECRET is not defined');
+  const outcome=await transaction(user.id,'Login',async db=>{
+   const locked=(await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
+   if(locked.status!=='active'){await event(db,user.id,'LOGIN_DENIED',user.id,'Account not active');return null;}
+   const session=(await db.query("INSERT INTO user_sessions(user_id,expires_at) VALUES($1,now()+interval '8 hours') RETURNING id",[user.id])).rows[0];
+   await db.query('UPDATE users SET last_login_at=now(),last_seen_at=now() WHERE id=$1',[user.id]);await event(db,user.id,'LOGIN',session.id,'Session started');
+   return {user:publicUser(locked),token:jwt.sign({sub:user.id,sid:session.id},secret,{expiresIn:'8h',algorithm:'HS256'})};
+  });
+  if(!outcome)throw new Error('Account pending approval or inactive');return {message:'Login successful',...outcome};
+ }
 }

@@ -1,3 +1,4 @@
+import { transaction } from "./access.service";
 import { pool } from "../config/db";
 import type { CreateCustomerDto, CustomerStatus } from "../models/customer.model";
 
@@ -63,7 +64,7 @@ export const CustomerService = {
       data.address,
     ];
 
-    const result = await pool.query(query, values);
+    const result = await transaction(data.owner_user_id, "Customer created", db => db.query(query, values));
     return result.rows[0];
   },
 
@@ -74,7 +75,7 @@ export const CustomerService = {
       RETURNING id
     `;
 
-    const result = await pool.query(query, [id, ownerUserId]);
+    const result = await transaction(ownerUserId, "Customer deleted", db => db.query(query, [id, ownerUserId]));
     return result.rows[0];
   },
 
@@ -99,7 +100,7 @@ export const CustomerService = {
         updated_at
     `;
 
-    const result = await pool.query(query, [status, id, ownerUserId]);
+    const result = await transaction(ownerUserId, "Customer status changed", db => db.query(query, [status, id, ownerUserId]));
     return result.rows[0];
   },
 };

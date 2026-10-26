@@ -1,3 +1,5 @@
+import AccessGuard from "./app/components/AccessGuard";
+import Users from "./app/pages/Users";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./app/pages/Login";
 import Register from "./app/pages/Register";
@@ -10,9 +12,10 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/customers" element={<Customers />} />
+      <Route path="/dashboard" element={<AccessGuard><Dashboard /></AccessGuard>} />
+      <Route path="/customers" element={<AccessGuard><Customers /></AccessGuard>} />
 
+      <Route path="/users" element={<AccessGuard admin><Users /></AccessGuard>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

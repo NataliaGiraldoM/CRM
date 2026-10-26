@@ -85,6 +85,7 @@ const countries = [
 export default function Customers() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const canManage = AuthService.getAuthData().user?.role === "admin";
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -463,14 +464,14 @@ export default function Customers() {
               </p>
             </div>
 
-            <button
+            {canManage && <button
               type="button"
               className="customers-panel__add-btn"
               onClick={handleOpenModal}
             >
               <Plus size={18} />
               <span>{t("Add Customer")}</span>
-            </button>
+            </button>}
           </div>
 
           <div className="customers-search">
@@ -524,7 +525,7 @@ export default function Customers() {
                         </span>
                       </td>
                       <td className="customers-actions-cell">
-                        <div
+                        {canManage && <div
                           className="customers-actions"
                           ref={openMenuId === customer.id ? actionsRef : null}
                         >
@@ -615,7 +616,7 @@ export default function Customers() {
                               </button>
                             </div>
                           )}
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))
