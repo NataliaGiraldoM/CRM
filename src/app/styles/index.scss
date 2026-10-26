@@ -903,3 +903,14 @@ body {
   color: #dc2626;
   font-weight: 500;
 }
+/* Orbit language control: usable with keyboard and narrow screens. */
+.orbit-language-auth { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.orbit-language-switch {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
+  background: #fff; color: #1e3a8a; font: inherit; font-size: 14px;
+  font-weight: 600; cursor: pointer; white-space: nowrap; min-height: 42px;
+}
+.orbit-language-switch:hover { background: #eff6ff; border-color: #3b82f6; }
+.orbit-language-switch:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.crm-header__actions { flex-wrap: wrap; }

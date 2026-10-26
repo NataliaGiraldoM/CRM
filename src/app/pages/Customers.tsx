@@ -1,3 +1,4 @@
+import { useLanguage } from "../../i18n/LanguageContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
@@ -82,6 +83,7 @@ const countries = [
 ];
 
 export default function Customers() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -215,7 +217,7 @@ export default function Customers() {
 
         const normalizedInput = trimmedValue.toLowerCase();
         const isValidCountry = countries.some(
-          (country) => country.toLowerCase() === normalizedInput
+          (country) => country.toLowerCase() === normalizedInput || t(country).toLowerCase() === normalizedInput
         );
 
         if (!isValidCountry) {
@@ -315,7 +317,7 @@ export default function Customers() {
 
       const matchedCountry =
         countries.find(
-          (country) => country.toLowerCase() === form.country.trim().toLowerCase()
+          (country) => country.toLowerCase() === form.country.trim().toLowerCase() || t(country).toLowerCase() === form.country.trim().toLowerCase()
         ) || form.country.trim();
 
       const response = await fetch(`${API_URL}/customers`, {
@@ -355,7 +357,7 @@ export default function Customers() {
   };
 
   const handleDeleteCustomer = async (id: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this customer?");
+    const confirmed = window.confirm(t("Are you sure you want to delete this customer?"));
     if (!confirmed) return;
 
     try {
@@ -442,9 +444,9 @@ export default function Customers() {
   }, [customers, search]);
 
   const getStatusLabel = (status: CustomerStatus) => {
-    if (status === "active") return "Active";
-    if (status === "pending") return "Pending";
-    return "Inactive";
+    if (status === "active") return t("Active");
+    if (status === "pending") return t("Pending");
+    return t("Inactive");
   };
 
   return (
@@ -455,9 +457,9 @@ export default function Customers() {
         <section className="customers-panel">
           <div className="customers-panel__top">
             <div>
-              <h2 className="customers-panel__title">Customer Database</h2>
+              <h2 className="customers-panel__title">{t("Customer Database")}</h2>
               <p className="customers-panel__subtitle">
-                Manage and view all customer information
+                {t("Manage and view all customer information")}
               </p>
             </div>
 
@@ -467,7 +469,7 @@ export default function Customers() {
               onClick={handleOpenModal}
             >
               <Plus size={18} />
-              <span>Add Customer</span>
+              <span>{t("Add Customer")}</span>
             </button>
           </div>
 
@@ -475,23 +477,23 @@ export default function Customers() {
             <Search size={20} className="customers-search__icon" />
             <input
               type="text"
-              placeholder="Search by name, email, or company..."
+              placeholder={t("Search by name, email, or company...")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
 
-          {error && <p className="customers-feedback customers-feedback--error">{error}</p>}
+          {error && <p className="customers-feedback customers-feedback--error">{t(error)}</p>}
 
           <div className="customers-table-wrapper">
             <table className="customers-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Company</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t("Name")}</th>
+                  <th>{t("Email")}</th>
+                  <th>{t("Company")}</th>
+                  <th>{t("Status")}</th>
+                  <th>{t("Actions")}</th>
                 </tr>
               </thead>
 
@@ -499,13 +501,13 @@ export default function Customers() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="customers-table__empty">
-                      Loading customers...
+                      {t("Loading customers...")}
                     </td>
                   </tr>
                 ) : filteredCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="customers-table__empty">
-                      No customers yet.
+                      {t("No customers yet.")}
                     </td>
                   </tr>
                 ) : (
@@ -543,12 +545,12 @@ export default function Customers() {
                             <div className="customers-actions__menu">
                               <button type="button" className="customers-actions__item">
                                 <Eye size={18} />
-                                <span>View Details</span>
+                                <span>{t("View Details")}</span>
                               </button>
 
                               <button type="button" className="customers-actions__item">
                                 <Pencil size={18} />
-                                <span>Edit</span>
+                                <span>{t("Edit")}</span>
                               </button>
 
                               <div className="customers-actions__status-wrapper">
@@ -562,7 +564,7 @@ export default function Customers() {
                                   }
                                 >
                                   <CircleAlert size={18} />
-                                  <span>Change Status</span>
+                                  <span>{t("Change Status")}</span>
                                   <span className="customers-actions__arrow">›</span>
                                 </button>
 
@@ -576,7 +578,7 @@ export default function Customers() {
                                       }
                                     >
                                       <CheckCircle2 size={18} />
-                                      <span>Active</span>
+                                      <span>{t("Active")}</span>
                                     </button>
 
                                     <button
@@ -587,7 +589,7 @@ export default function Customers() {
                                       }
                                     >
                                       <Clock3 size={18} />
-                                      <span>Pending</span>
+                                      <span>{t("Pending")}</span>
                                     </button>
 
                                     <button
@@ -598,7 +600,7 @@ export default function Customers() {
                                       }
                                     >
                                       <XCircle size={18} />
-                                      <span>Inactive</span>
+                                      <span>{t("Inactive")}</span>
                                     </button>
                                   </div>
                                 )}
@@ -609,7 +611,7 @@ export default function Customers() {
                                 className="customers-actions__item"
                                 onClick={() => handleDeleteCustomer(customer.id)}
                               >
-                                <span>Delete</span>
+                                <span>{t("Delete")}</span>
                               </button>
                             </div>
                           )}
@@ -635,7 +637,7 @@ export default function Customers() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="customers-modal__header customers-modal__header--styled">
-              <h3>Add New Customer</h3>
+              <h3>{t("Add New Customer")}</h3>
 
               <button
                 type="button"
@@ -651,39 +653,39 @@ export default function Customers() {
               onSubmit={handleSubmit}
             >
               <div className="customers-modal__field">
-                <label htmlFor="full_name">Full Name *</label>
+                <label htmlFor="full_name">{t("Full Name *")}</label>
                 <input
                   id="full_name"
                   name="full_name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder={t("John Doe")}
                   value={form.full_name}
                   onChange={handleInputChange}
                   required
                 />
                 {formErrors.full_name && (
-                  <span className="customers-field-error">{formErrors.full_name}</span>
+                  <span className="customers-field-error">{t(formErrors.full_name || "")}</span>
                 )}
               </div>
 
               <div className="customers-modal__field">
-                <label htmlFor="email">Email *</label>
+                <label htmlFor="email">{t("Email *")}</label>
                 <input
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="john@company.com"
+                  placeholder={t("john@company.com")}
                   value={form.email}
                   onChange={handleInputChange}
                   required
                 />
                 {formErrors.email && (
-                  <span className="customers-field-error">{formErrors.email}</span>
+                  <span className="customers-field-error">{t(formErrors.email || "")}</span>
                 )}
               </div>
 
               <div className="customers-modal__field">
-                <label htmlFor="phone_number">Phone Number *</label>
+                <label htmlFor="phone_number">{t("Phone Number *")}</label>
                 <input
                   id="phone_number"
                   name="phone_number"
@@ -696,69 +698,71 @@ export default function Customers() {
                   required
                 />
                 {formErrors.phone_number && (
-                  <span className="customers-field-error">{formErrors.phone_number}</span>
+                  <span className="customers-field-error">{t(formErrors.phone_number || "")}</span>
                 )}
               </div>
 
               <div className="customers-modal__field">
-                <label htmlFor="company">Company *</label>
+                <label htmlFor="company">{t("Company *")}</label>
                 <input
                   id="company"
                   name="company"
                   type="text"
-                  placeholder="Company Inc."
+                  placeholder={t("Company Inc.")}
                   value={form.company}
                   onChange={handleInputChange}
                   required
                 />
                 {formErrors.company && (
-                  <span className="customers-field-error">{formErrors.company}</span>
+                  <span className="customers-field-error">{t(formErrors.company || "")}</span>
                 )}
               </div>
 
               <div className="customers-modal__field">
-                <label htmlFor="status">Status</label>
+                <label htmlFor="status">{t("Status")}</label>
                 <select
                   id="status"
                   name="status"
                   value={form.status}
                   onChange={handleInputChange}
                 >
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">{t("Active")}</option>
+                  <option value="pending">{t("Pending")}</option>
+                  <option value="inactive">{t("Inactive")}</option>
                 </select>
               </div>
 
               <div className="customers-modal__field">
-                <label htmlFor="country">Country *</label>
+                <label htmlFor="country">{t("Country *")}</label>
                 <input
                   id="country"
                   name="country"
                   type="text"
-                  placeholder="Enter country"
+                  placeholder={t("Enter country")}
+                  list="orbit-countries"
                   value={form.country}
                   onChange={handleInputChange}
                   required
                 />
+                <datalist id="orbit-countries">{countries.map(country => <option key={country} value={t(country)} />)}</datalist>
                 {formErrors.country && (
-                  <span className="customers-field-error">{formErrors.country}</span>
+                  <span className="customers-field-error">{t(formErrors.country || "")}</span>
                 )}
               </div>
 
               <div className="customers-modal__field customers-modal__field--full">
-                <label htmlFor="address">Address *</label>
+                <label htmlFor="address">{t("Address *")}</label>
                 <input
                   id="address"
                   name="address"
                   type="text"
-                  placeholder="123 Business Ave, Suite 100"
+                  placeholder={t("123 Business Ave, Suite 100")}
                   value={form.address}
                   onChange={handleInputChange}
                   required
                 />
                 {formErrors.address && (
-                  <span className="customers-field-error">{formErrors.address}</span>
+                  <span className="customers-field-error">{t(formErrors.address || "")}</span>
                 )}
               </div>
 
@@ -768,7 +772,7 @@ export default function Customers() {
                   className="customers-modal__cancel"
                   onClick={handleCloseModal}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
 
                 <button
@@ -776,7 +780,7 @@ export default function Customers() {
                   className="customers-modal__submit customers-modal__submit--styled"
                   disabled={saving}
                 >
-                  {saving ? "Creating..." : "Create Customer"}
+                  {saving ? t("Creating...") : t("Create Customer")}
                 </button>
               </div>
             </form>

@@ -1,9 +1,12 @@
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { useLanguage } from "../../i18n/LanguageContext";
 import React, { useState } from "react";
 import { Building2, Lock, Mail } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthService, type LoginData } from "../../services/auth.service";
 
 export default function Login() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,32 +50,33 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-content">
+        <div className="orbit-language-auth"><LanguageSwitcher /></div>
         <div className="login-header">
           <div className="logo-container">
             <Building2 className="logo-icon" />
           </div>
           <h1 className="login-title">CRM Cloud</h1>
-          <p className="login-subtitle">Customer Management System</p>
+          <p className="login-subtitle">{t("Customer Management System")}</p>
         </div>
 
         <div className="login-card">
           <div className="card-header">
-            <h2 className="card-title">Welcome Back</h2>
-            <p className="card-description">Sign in to access your dashboard</p>
+            <h2 className="card-title">{t("Welcome Back")}</h2>
+            <p className="card-description">{t("Sign in to access your dashboard")}</p>
           </div>
 
           <div className="card-body">
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
                 <label htmlFor="email" className="form-label">
-                  Email
+                  {t("Email")}
                 </label>
                 <div className="input-wrapper">
                   <Mail className="input-icon" />
                   <input
                     id="email"
                     type="email"
-                    placeholder="you@company.com"
+                    placeholder={t("you@company.com")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="form-input"
@@ -82,7 +86,7 @@ export default function Login() {
 
               <div className="form-group">
                 <label htmlFor="password" className="form-label">
-                  Password
+                  {t("Password")}
                 </label>
                 <div className="input-wrapper">
                   <Lock className="input-icon" />
@@ -97,22 +101,22 @@ export default function Login() {
                 </div>
               </div>
 
-              {error && <div className="error-message">{error}</div>}
+              {error && <div className="error-message">{t(error)}</div>}
 
               <button 
                 type="submit" 
                 className="submit-button"
                 disabled={loading}
               >
-                {loading ? "Signing In..." : "Sign In"}
+                {loading ? t("Signing In...") : t("Sign In")}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
+                {t("Don't have an account?")}{" "}
                 <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Sign up
+                  {t("Sign up")}
                 </Link>
               </p>
             </div>
@@ -120,7 +124,7 @@ export default function Login() {
         </div>
 
         <div className="footer-text">
-          <p>Cloud Migration MVP - Customer Management Module</p>
+          <p>{t("Cloud Migration MVP - Customer Management Module")}</p>
         </div>
       </div>
     </div>

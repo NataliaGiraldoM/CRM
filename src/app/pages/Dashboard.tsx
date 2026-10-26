@@ -1,3 +1,4 @@
+import { useLanguage } from "../../i18n/LanguageContext";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
@@ -49,6 +50,7 @@ type Customer = {
 const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
 
 export default function Dashboard() {
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -125,7 +127,7 @@ export default function Dashboard() {
     total === 0 ? 0 : Number(((value / total) * 100).toFixed(1));
 
   const statusDistributionData = {
-    labels: ["Active", "Pending", "Inactive"],
+    labels: [t("Active"), t("Pending"), t("Inactive")],
     datasets: [
       {
         data: [
@@ -165,7 +167,7 @@ export default function Dashboard() {
   };
 
   const months = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat("en", { month: "short" });
+    const formatter = new Intl.DateTimeFormat(language, { month: "short" });
     const now = new Date();
     const result: string[] = [];
 
@@ -175,7 +177,7 @@ export default function Dashboard() {
     }
 
     return result;
-  }, []);
+  }, [language]);
 
   const newCustomersByMonth = useMemo(() => {
     const now = new Date();
@@ -201,7 +203,7 @@ export default function Dashboard() {
     labels: months,
     datasets: [
       {
-        label: "New Customers",
+        label: t("New Customers"),
         data: newCustomersByMonth,
         backgroundColor: "#3b82f6",
       },
@@ -253,7 +255,7 @@ export default function Dashboard() {
       labels: months,
       datasets: [
         {
-          label: "Active",
+          label: t("Active"),
           data: active,
           borderColor: "#22c55e",
           backgroundColor: "rgba(34,197,94,0.25)",
@@ -261,7 +263,7 @@ export default function Dashboard() {
           tension: 0.35,
         },
         {
-          label: "Pending",
+          label: t("Pending"),
           data: pending,
           borderColor: "#f59e0b",
           backgroundColor: "rgba(245,158,11,0.25)",
@@ -269,7 +271,7 @@ export default function Dashboard() {
           tension: 0.35,
         },
         {
-          label: "Inactive",
+          label: t("Inactive"),
           data: inactive,
           borderColor: "#94a3b8",
           backgroundColor: "rgba(148,163,184,0.25)",
@@ -278,7 +280,7 @@ export default function Dashboard() {
         },
       ],
     };
-  }, [customers, months]);
+  }, [customers, months, t]);
 
   const lineOptions = {
     plugins: {
@@ -310,50 +312,50 @@ export default function Dashboard() {
 
       <main className="dashboard-main">
         <section className="dashboard-header">
-          <h2 className="dashboard-title">Analytics</h2>
+          <h2 className="dashboard-title">{t("Analytics")}</h2>
           <p className="dashboard-subtitle">
-            Overview of your customer performance and trends
+            {t("Overview of your customer performance and trends")}
           </p>
         </section>
 
         <section className="dashboard-cards">
           <article className="dashboard-card">
-            <p className="dashboard-card-label">Total Customers</p>
+            <p className="dashboard-card-label">{t("Total Customers")}</p>
             <p className="dashboard-card-value">
               {loading ? "..." : stats.totalCustomers}
             </p>
             <p className="dashboard-card-helper dashboard-card-helper--success">
-              Real data from database
+              {t("Real data from database")}
             </p>
           </article>
 
           <article className="dashboard-card">
-            <p className="dashboard-card-label">Active Customers</p>
+            <p className="dashboard-card-label">{t("Active Customers")}</p>
             <p className="dashboard-card-value">
               {loading ? "..." : stats.activeCustomers}
             </p>
             <p className="dashboard-card-helper">
-              {percentage(stats.activeCustomers, stats.totalCustomers)}% of total
+              {percentage(stats.activeCustomers, stats.totalCustomers)}% {t("of total")}
             </p>
           </article>
 
           <article className="dashboard-card">
-            <p className="dashboard-card-label">Pending Review</p>
+            <p className="dashboard-card-label">{t("Pending Review")}</p>
             <p className="dashboard-card-value">
               {loading ? "..." : stats.pendingCustomers}
             </p>
             <p className="dashboard-card-helper dashboard-card-helper--warning">
-              {percentage(stats.pendingCustomers, stats.totalCustomers)}% of total
+              {percentage(stats.pendingCustomers, stats.totalCustomers)}% {t("of total")}
             </p>
           </article>
 
           <article className="dashboard-card">
-            <p className="dashboard-card-label">Inactive</p>
+            <p className="dashboard-card-label">{t("Inactive")}</p>
             <p className="dashboard-card-value">
               {loading ? "..." : stats.inactiveCustomers}
             </p>
             <p className="dashboard-card-helper">
-              {percentage(stats.inactiveCustomers, stats.totalCustomers)}% of total
+              {percentage(stats.inactiveCustomers, stats.totalCustomers)}% {t("of total")}
             </p>
           </article>
         </section>
@@ -362,10 +364,10 @@ export default function Dashboard() {
           <article className="dashboard-panel">
             <header className="dashboard-panel-header">
               <h3 className="dashboard-panel-title">
-                Customer Status Distribution
+                {t("Customer Status Distribution")}
               </h3>
               <p className="dashboard-panel-subtitle">
-                Current distribution by status
+                {t("Current distribution by status")}
               </p>
             </header>
 
@@ -376,13 +378,13 @@ export default function Dashboard() {
 
               <div className="dashboard-status-labels">
                 <span className="status-label status-label--active">
-                  Active {percentage(stats.activeCustomers, stats.totalCustomers)}%
+                  {t("Active")} {percentage(stats.activeCustomers, stats.totalCustomers)}%
                 </span>
                 <span className="status-label status-label--pending">
-                  Pending {percentage(stats.pendingCustomers, stats.totalCustomers)}%
+                  {t("Pending")} {percentage(stats.pendingCustomers, stats.totalCustomers)}%
                 </span>
                 <span className="status-label status-label--inactive">
-                  Inactive {percentage(stats.inactiveCustomers, stats.totalCustomers)}%
+                  {t("Inactive")} {percentage(stats.inactiveCustomers, stats.totalCustomers)}%
                 </span>
               </div>
             </div>
@@ -390,9 +392,9 @@ export default function Dashboard() {
 
           <article className="dashboard-panel">
             <header className="dashboard-panel-header">
-              <h3 className="dashboard-panel-title">New Customers Growth</h3>
+              <h3 className="dashboard-panel-title">{t("New Customers Growth")}</h3>
               <p className="dashboard-panel-subtitle">
-                Monthly new customer acquisitions
+                {t("Monthly new customer acquisitions")}
               </p>
             </header>
 
@@ -405,9 +407,9 @@ export default function Dashboard() {
         <section className="dashboard-row">
           <article className="dashboard-panel">
             <header className="dashboard-panel-header">
-              <h3 className="dashboard-panel-title">Customer Trends Over Time</h3>
+              <h3 className="dashboard-panel-title">{t("Customer Trends Over Time")}</h3>
               <p className="dashboard-panel-subtitle">
-                6-month customer status trend analysis
+                {t("6-month customer status trend analysis")}
               </p>
             </header>
 

@@ -1,3 +1,5 @@
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { useEffect, useRef, useState } from "react";
 import {
   Cloud,
@@ -13,13 +15,14 @@ import { AuthService } from "../../services/auth.service";
 import "../styles/header.scss";
 
 export default function Header() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { user } = AuthService.getAuthData();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const userName = user?.name || "User";
+  const userName = user?.name || t("User");
 
   const handleToggleMenu = () => {
     setIsMenuOpen((prev) => !prev);
@@ -84,13 +87,14 @@ export default function Header() {
           </div>
 
           <div className="crm-header__brand-text">
-            <h1 className="crm-header__title">CRM Analytics</h1>
-            <p className="crm-header__subtitle">Cloud Migration MVP</p>
+            <h1 className="crm-header__title">{t("CRM Analytics")}</h1>
+            <p className="crm-header__subtitle">{t("Cloud Migration MVP")}</p>
           </div>
         </div>
 
         <div className="crm-header__actions">
-          <nav className="crm-header__nav" aria-label="Primary navigation">
+          <LanguageSwitcher />
+          <nav className="crm-header__nav" aria-label={t("Primary navigation")}>
             <NavLink
               to="/dashboard"
               onClick={handleCloseMenu}
@@ -99,7 +103,7 @@ export default function Header() {
               }
             >
               <LayoutGrid size={20} />
-              <span>Analytics</span>
+              <span>{t("Analytics")}</span>
             </NavLink>
 
             <NavLink
@@ -110,7 +114,7 @@ export default function Header() {
               }
             >
               <Users size={20} />
-              <span>Customers</span>
+              <span>{t("Customers")}</span>
             </NavLink>
           </nav>
 
@@ -132,7 +136,7 @@ export default function Header() {
 
             {isMenuOpen && (
               <div className="crm-header__dropdown" role="menu">
-                <div className="crm-header__dropdown-title">My Account</div>
+                <div className="crm-header__dropdown-title">{t("My Account")}</div>
 
                 <button
                   type="button"
@@ -140,7 +144,7 @@ export default function Header() {
                   onClick={handleEditProfile}
                 >
                   <PencilLine size={18} />
-                  <span>Edit Profile</span>
+                  <span>{t("Edit Profile")}</span>
                 </button>
 
                 <button
@@ -149,7 +153,7 @@ export default function Header() {
                   onClick={handleLogout}
                 >
                   <LogOut size={18} />
-                  <span>Logout</span>
+                  <span>{t("Logout")}</span>
                 </button>
               </div>
             )}
