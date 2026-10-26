@@ -1,0 +1,14 @@
+.orbit-catalog-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.orbit-catalog-editor{scroll-margin-top:20px;}.orbit-catalog-editor .orbit-audit-panel-heading>button{margin-left:auto;}
+.orbit-catalog-form{padding:24px;}.orbit-catalog-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;}
+.orbit-catalog-fields label{display:flex;flex-direction:column;gap:8px;font-size:.85rem;font-weight:600;color:#334155;min-width:0;}
+.orbit-catalog-fields small{font-size:.75rem;color:#64748b;font-weight:400;}
+.orbit-catalog textarea{font:inherit;font-size:.88rem;padding:10px 12px;border:1px solid #dbe3ee;border-radius:9px;resize:vertical;min-width:0;max-width:100%;color:#334155;background:white;}
+.orbit-catalog-wide{grid-column:1/-1;}.orbit-catalog-fields .orbit-catalog-check{flex-direction:row;align-items:center;}.orbit-catalog-check input{min-height:0;width:17px;height:17px;accent-color:#2563eb;}
+.orbit-catalog-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;}
+.orbit-catalog-filters{display:flex;gap:12px;padding:20px 24px;flex-wrap:wrap;border-bottom:1px solid #edf2f7;}
+.orbit-catalog-search{flex:1;min-width:190px;display:flex;align-items:center;gap:10px;color:#94a3b8;}.orbit-catalog-search input{width:100%;}
+.orbit-catalog-money{white-space:nowrap;font-variant-numeric:tabular-nums;}
+.orbit-catalog-description{display:block;color:#64748b;font-size:.75rem;max-width:250px;overflow-wrap:anywhere;white-space:pre-wrap;}
+.orbit-catalog-success{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;color:#15803d;}
+@media(max-width:600px){.orbit-catalog-fields{grid-template-columns:1fr;}.orbit-catalog-form,.orbit-catalog-filters{padding:18px 16px;}.orbit-catalog-filters>select{flex:1;}}

@@ -3,7 +3,7 @@ import { pool } from "../config/db";
 import type { CreateCustomerDto, CustomerStatus } from "../models/customer.model";
 
 export const CustomerService = {
-  async getAllByOwner(ownerUserId: string) {
+  async getAllByOwner(_ownerUserId: string) {
     const query = `
       SELECT
         id,
@@ -18,11 +18,10 @@ export const CustomerService = {
         created_at,
         updated_at
       FROM customers
-      WHERE owner_user_id = $1
       ORDER BY created_at DESC
     `;
 
-    const result = await pool.query(query, [ownerUserId]);
+    const result = await pool.query(query);
     return result.rows;
   },
 
@@ -71,11 +70,11 @@ export const CustomerService = {
   async delete(id: string, ownerUserId: string) {
     const query = `
       DELETE FROM customers
-      WHERE id = $1 AND owner_user_id = $2
+      WHERE id = $1
       RETURNING id
     `;
 
-    const result = await transaction(ownerUserId, "Customer deleted", db => db.query(query, [id, ownerUserId]));
+    const result = await transaction(ownerUserId, "Customer deleted", db => db.query(query, [id]));
     return result.rows[0];
   },
 
@@ -85,7 +84,7 @@ export const CustomerService = {
       SET
         status = $1,
         updated_at = NOW()
-      WHERE id = $2 AND owner_user_id = $3
+      WHERE id = $2
       RETURNING
         id,
         owner_user_id,
@@ -100,7 +99,7 @@ export const CustomerService = {
         updated_at
     `;
 
-    const result = await transaction(ownerUserId, "Customer status changed", db => db.query(query, [status, id, ownerUserId]));
+    const result = await transaction(ownerUserId, "Customer status changed", db => db.query(query, [status, id]));
     return result.rows[0];
   },
 };

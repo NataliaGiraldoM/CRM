@@ -1,3 +1,4 @@
+import productRoutes from "./routes/product.routes";
 import accessRoutes from "./routes/access.routes";
 import express from "express";
 import cors from "cors";
@@ -18,6 +19,7 @@ app.get("/test", (_req, res) => {
 });
 
 app.use('/api', accessRoutes);
+app.use('/api', productRoutes);
 app.use((_req, res) => {res.status(404).json({message:'API route not found'});});
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
  console.error(error instanceof Error ? error.message : 'Server error');

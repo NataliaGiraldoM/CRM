@@ -9,11 +9,14 @@ async function main(){
   const db=await pool.connect();try{
    await db.query('SELECT pg_advisory_lock(761205)');
    await db.query('CREATE TABLE IF NOT EXISTS orbit_migrations(name text PRIMARY KEY, applied_at timestamptz DEFAULT now())');
-   if(!(await db.query("SELECT 1 FROM orbit_migrations WHERE name='001_access'")).rowCount){
-    const sql=readFileSync(resolve(__dirname,'../../migrations/001_access.sql'),'utf8');
-    // Record the migration within its transaction.
-    await db.query(sql.replace('COMMIT;',"INSERT INTO orbit_migrations(name) VALUES('001_access'); COMMIT;"));
-   }console.log('Migration ready');
+   for(const name of ['001_access','002_catalog']) {
+    if(!(await db.query('SELECT 1 FROM orbit_migrations WHERE name=$1',[name])).rowCount){
+     const sql=readFileSync(resolve(__dirname,`../../migrations/${name}.sql`),'utf8');
+     await db.query(sql.replace('COMMIT;',`INSERT INTO orbit_migrations(name) VALUES('${name}'); COMMIT;`));
+     console.log('Applied:',name);
+    }
+   }
+   console.log('Migration ready');
   }finally{await db.query('SELECT pg_advisory_unlock(761205)');db.release();}
  }else if(command==='bootstrap'){
   const email=process.argv[3]?.trim().toLowerCase();if(!email)throw new Error('Usage: npm run admin:bootstrap -- email@example.com');

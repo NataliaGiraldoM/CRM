@@ -1,3 +1,4 @@
+import Products from "./app/pages/Products";
 import AccessGuard from "./app/components/AccessGuard";
 import Users from "./app/pages/Users";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/dashboard" element={<AccessGuard><Dashboard /></AccessGuard>} />
       <Route path="/customers" element={<AccessGuard><Customers /></AccessGuard>} />
 
+      <Route path="/products" element={<AccessGuard><Products /></AccessGuard>} />
       <Route path="/users" element={<AccessGuard admin><Users /></AccessGuard>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

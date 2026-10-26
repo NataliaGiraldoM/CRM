@@ -300,3 +300,5 @@ body {
  .crm-header__nav {gap:6px;}
  .crm-header__nav-item {flex:1;min-width:90px;width:auto;padding:0 10px;gap:7px;font-size:.85rem;border-radius:12px;}
 }
+
+@media (min-width:1025px) and (max-width:1450px){.crm-header__container{flex-direction:column;align-items:stretch;}.crm-header__actions{justify-content:space-between;margin-left:0;}.crm-header__nav-item{padding:0 16px;}}

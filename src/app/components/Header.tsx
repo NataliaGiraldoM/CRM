@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Cloud,
   ShieldCheck,
+  Package,
   LayoutGrid,
   Users,
   CircleUserRound,
@@ -114,6 +115,7 @@ export default function Header() {
               <Users size={20} />
               <span>{t("Customers")}</span>
             </NavLink>
+            <NavLink to="/products" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><Package size={20}/><span>{t("Catalog")}</span></NavLink>
             {user?.role === "admin" && (
               <NavLink to="/users" onClick={handleCloseMenu}
                 className={({ isActive }) => `crm-header__nav-item ${isActive ? "is-active" : ""}`}>

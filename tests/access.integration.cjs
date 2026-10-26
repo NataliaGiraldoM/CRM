@@ -4,6 +4,7 @@ const base=path.resolve(__dirname,'../backend');
 const db=new PGlite();await db.waitReady;
 await db.exec(fs.readFileSync(path.resolve(base,'../creacion-diagrama.sql'),'utf8').replace('CREATE EXTENSION IF NOT EXISTS pgcrypto;',''));
 await db.exec(fs.readFileSync(base+'/migrations/001_access.sql','utf8'));
+await db.exec(fs.readFileSync(base+'/migrations/002_catalog.sql','utf8'));
 let tail=Promise.resolve();async function acquire(){const before=tail;let release;tail=new Promise(r=>release=r);await before;return release;}
 const query=async(sql,args)=>{const r=await db.query(sql,args);return {...r,rowCount:r.affectedRows??r.rows.length};};
 const pool={async connect(){const release=await acquire();return {query,release};},async query(sql,args){const release=await acquire();try{return await query(sql,args);}finally{release();}}};
@@ -24,6 +25,22 @@ for(const [method,route,body] of [['POST','/customers',{}],['DELETE','/customers
 assert.equal((await request('PATCH',`/admin/users/${a.data.user.id}`,{role:'viewer',status:'inactive',reason:'Self access attempt'},token)).status,400);
 const customer=await request('POST','/customers',{full_name:'Client Test',email:'client@test.co',phone_number:'3001234567',company:'Company',status:'active',country:'Colombia',address:'Calle 123'},token);assert.equal(customer.status,201);
 assert.equal((await request('PATCH',`/customers/${customer.data.id}/status`,{status:'inactive'},token)).status,200);
+// Catalog permissions, exact prices, duplicate codes, concurrency, services and shared customers.
+assert.equal((await request('GET','/customers',null,vt)).data.length,1);
+const item={code:'prod-001',name:'Producto Test',description:'Prueba',category:'General',kind:'product',tracks_inventory:true,base_price:'100.05',tax_treatment:'taxed',vat_rate:'19',active:true,reason:'Initial catalog entry'};
+assert.equal((await request('POST','/products',item,vt)).status,403);
+const created=await request('POST','/products',item,token);assert.equal(created.status,201);assert.equal(created.data.code,'PROD-001');
+assert.equal((await request('POST','/products',item,token)).status,409);
+const list=await request('GET','/products',null,vt);assert.equal(list.status,200);assert.equal(Number(list.data[0].vat_amount),19.01);assert.equal(Number(list.data[0].final_price),119.06);
+const change={...item,code:'PROD-001',base_price:'200',version:1,reason:'Updated price for test'};
+assert.equal((await request('PUT',`/products/${created.data.id}`,change,vt)).status,403);
+assert.equal((await request('PUT',`/products/${created.data.id}`,change,token)).status,200);
+assert.equal((await request('PUT',`/products/${created.data.id}`,change,token)).status,409);
+for(const invalid of [{...item,base_price:'-2'},{...item,vat_rate:'101'},{...item,kind:'service',tracks_inventory:true},{...item,tax_treatment:'excluded',vat_rate:'19'},{...item,reason:''},{...item,base_price:'1.999'}])assert.equal((await request('POST','/products',invalid,token)).status,400);
+const service={...item,code:'SERV-001',kind:'service',tracks_inventory:false,tax_treatment:'excluded',vat_rate:'0'};assert.equal((await request('POST','/products',service,token)).status,201);
+assert.equal((await request('PUT',`/products/${created.data.id}`,{...change,version:2,active:false},token)).status,200);
+const catalogAudit=await request('GET','/admin/audit',null,token);assert(catalogAudit.data.some(e=>e.entity==='products'&&e.action==='UPDATE'&&e.before_data.base_price===100.05&&e.after_data.base_price===200));
+console.log('PASS catalog: shared clients, viewer reads/admin writes, exact VAT rounding, duplicates, validation, service constraints, optimistic versions, deactivation and price audit.');
 const audit=await request('GET','/admin/audit',null,token);assert.equal(audit.status,200);assert(audit.data.some(e=>e.entity==='customers'&&e.actor_user_id===a.data.user.id&&e.action==='UPDATE'));assert(!JSON.stringify(audit.data).includes('password_hash'));assert(!JSON.stringify(audit.data).includes('SecurePass'));
 await assert.rejects(()=>db.exec('DELETE FROM audit_events'));
 assert.equal((await request('PATCH',`/admin/users/${viewerId}`,{role:'viewer',status:'inactive',reason:'Account suspended'},token)).status,200);assert.equal((await request('GET','/customers',null,vt)).status,401);
