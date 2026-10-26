@@ -7,6 +7,7 @@ const router = Router();
 console.log("Customer routes loaded");
 
 router.get("/customers", authMiddleware, CustomerController.getAll);
+router.put("/customers/:id", authMiddleware, adminOnly, CustomerController.update);
 router.post("/customers", authMiddleware, adminOnly, CustomerController.create);
 router.delete("/customers/:id", authMiddleware, adminOnly, CustomerController.delete);
 router.patch("/customers/:id/status", authMiddleware, adminOnly, CustomerController.updateStatus);

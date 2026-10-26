@@ -1,3 +1,8 @@
+function validCustomer(b:any):boolean {
+ if(!b || typeof b!=="object") return false;
+ const limits:Record<string,number>={full_name:120,email:150,phone_number:30,company:120,country:80,address:180};
+ return Object.entries(limits).every(([k,max])=>typeof b[k]==='string' && b[k].trim().length>0 && b[k].trim().length<=max) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim()) && /^[0-9]{7,15}$/.test(b.phone_number) && ['active','inactive','pending'].includes(b.status);
+}
 import { Request, Response } from "express";
 import { CustomerService } from "../services/customer.service";
 import type { CustomerStatus } from "../models/customer.model";
@@ -27,6 +32,14 @@ export const CustomerController = {
     }
   },
 
+  async update(req: AuthRequest, res: Response) {
+    const id=String(req.params.id), b=req.body || {};
+    if (!/^[0-9a-f-]{36}$/i.test(id) || !req.user?.id || !validCustomer(b)) return res.status(400).json({message:"Invalid customer data"});
+    try {
+      const result=await CustomerService.update(id,req.user.id,b);
+      return result ? res.json(result) : res.status(404).json({message:"Customer not found"});
+    } catch(e:any) { if(e.code==='23505') return res.status(409).json({message:"Customer email already exists"}); return res.status(500).json({message:"Unable to save customer"}); }
+  },
   async create(req: AuthRequest, res: Response) {
     try {
       const ownerUserId = req.user?.id;
@@ -45,7 +58,7 @@ export const CustomerController = {
         address,
       } = req.body;
 
-      if (
+      if (!validCustomer(req.body) ||
         !full_name ||
         !email ||
         !phone_number ||
@@ -70,6 +83,7 @@ export const CustomerController = {
 
       return res.status(201).json(newCustomer);
     } catch (error) {
+      if ((error as any)?.code === "23505") return res.status(409).json({message:"Customer email already exists"});
       console.error("Error creating customer:", error);
       return res.status(500).json({ message: "Internal server error" });
     }

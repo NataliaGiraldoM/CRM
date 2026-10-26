@@ -4,7 +4,13 @@ import { pool } from '../config/db';
 import { transaction, event, publicUser } from '../services/access.service';
 const router=Router();router.use(authMiddleware);
 router.get('/auth/me',async(req:AuthRequest,res)=>{res.json({user:publicUser((await pool.query('SELECT * FROM users WHERE id=$1',[req.user!.id])).rows[0])});});
-router.post('/auth/activity',(_req,res)=>{res.json({ok:true});});
+router.patch('/auth/profile',async(req:AuthRequest,res,next)=>{
+ const {name,email}=req.body||{};
+ if(typeof name!=="string"||typeof email!=="string"||name.trim().length<2||name.trim().length>100||email.trim().length>150||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))return res.status(400).json({message:'Invalid profile data'});
+ try {const user=await transaction(req.user!.id,'Profile updated',async db=>{const r=await db.query('UPDATE users SET full_name=$1,email=$2,updated_at=now() WHERE id=$3 RETURNING *',[name.trim(),email.trim().toLowerCase(),req.user!.id]);return publicUser(r.rows[0]);});res.json({user});}
+ catch(e:any){if(e.code==='23505')return res.status(409).json({message:'Email already exists'});next(e);}
+});
+router.post('/auth/activity' ,(_req,res)=>{res.json({ok:true});});
 router.post('/auth/logout',async(req:AuthRequest,res)=>{await transaction(req.user!.id,'Logout',async db=>{await db.query("UPDATE user_sessions SET revoked_at=now(),end_reason='logout' WHERE id=$1",[req.user!.sessionId]);await event(db,req.user!.id,'LOGOUT',req.user!.sessionId,'Explicit logout');});res.json({ok:true});});
 router.get('/admin/users',adminOnly,async(_req,res)=>{const r=await pool.query('SELECT id,full_name,email,role,status,last_login_at,last_seen_at FROM users ORDER BY created_at DESC');res.json(r.rows.map(publicUser));});
 router.patch('/admin/users/:id',adminOnly,async(req:AuthRequest,res)=>{

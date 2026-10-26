@@ -25,6 +25,12 @@ export const CustomerService = {
     return result.rows;
   },
 
+  async update(id:string,actor:string,data:CreateCustomerDto) {
+    return transaction(actor, "Customer updated", async db=>{
+      const result=await db.query(`UPDATE customers SET full_name=$1,email=$2,phone_number=$3,company=$4,status=$5,country=$6,address=$7,updated_at=now() WHERE id=$8 RETURNING *`,[data.full_name.trim(),data.email.trim().toLowerCase(),data.phone_number.trim(),data.company.trim(),data.status,data.country.trim(),data.address.trim(),id]);
+      return result.rows[0];
+    });
+  },
   async create(data: CreateCustomerDto) {
     const query = `
       INSERT INTO customers (
