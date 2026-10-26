@@ -2,10 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { AuthService } from "../../services/auth.service";
-import {
-  CustomerService,
-  isUnauthorizedError,
-} from "../../services/customer.service";
+
 import {
   Chart as ChartJS,
   ArcElement,
@@ -32,8 +29,24 @@ ChartJS.register(
   LineElement,
   Filler
 );
-import type { Customer } from "../../features/customers/customer.types";
-import { CUSTOMER_REFRESH_INTERVAL_MS } from "../../features/customers/customer.constants";
+
+type CustomerStatus = "active" | "pending" | "inactive";
+
+type Customer = {
+  id: string;
+  owner_user_id: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  company: string;
+  status: CustomerStatus;
+  country: string;
+  address: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -51,14 +64,25 @@ export default function Dashboard() {
         return;
       }
 
-      const data = await CustomerService.getCustomers(token);
-      setCustomers(data);
-    } catch (error) {
-      if (isUnauthorizedError(error)) {
+      const response = await fetch(`${API_URL}/customers`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
         navigate("/login");
         return;
       }
 
+      if (!response.ok) {
+        throw new Error("Failed to fetch customers");
+      }
+
+      const data: Customer[] = await response.json();
+      setCustomers(data);
+    } catch (error) {
       console.error("Error loading dashboard customers:", error);
     } finally {
       setLoading(false);
@@ -78,7 +102,7 @@ export default function Dashboard() {
 
     const interval = setInterval(() => {
       fetchCustomers(token);
-    }, CUSTOMER_REFRESH_INTERVAL_MS);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [navigate]);

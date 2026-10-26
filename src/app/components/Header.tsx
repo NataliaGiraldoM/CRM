@@ -10,8 +10,6 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthService } from "../../services/auth.service";
-import type { User } from "../../services/auth.service";
-import EditProfileModal from "./EditProfileModal";
 import "../styles/header.scss";
 
 export default function Header() {
@@ -23,9 +21,6 @@ export default function Header() {
 
   const userName = user?.name || "User";
 
-  const [currentUser, setCurrentUser] = useState<User | null>(AuthService.getAuthData().user);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-
   const handleToggleMenu = () => {
     setIsMenuOpen((prev) => !prev);
   };
@@ -34,15 +29,13 @@ export default function Header() {
     setIsMenuOpen(false);
   };
 
-  const handleEditProfile = () => {
+  const handleGoCustomers = () => {
     setIsMenuOpen(false);
-    setIsEditOpen(true);
+    navigate("/customers");
   };
 
-  const handleCloseEdit = () => setIsEditOpen(false);
-
-  const handleSaveProfile = (updated: User) => {
-    setCurrentUser(updated);
+  const handleEditProfile = () => {
+    setIsMenuOpen(false);
   };
 
   const handleLogout = () => {
@@ -91,7 +84,7 @@ export default function Header() {
           </div>
 
           <div className="crm-header__brand-text">
-            <h1 className="crm-header__title">Orbit</h1>
+            <h1 className="crm-header__title">CRM Analytics</h1>
             <p className="crm-header__subtitle">Cloud Migration MVP</p>
           </div>
         </div>
@@ -130,7 +123,7 @@ export default function Header() {
               aria-expanded={isMenuOpen}
             >
               <CircleUserRound size={22} />
-              <span className="crm-header__profile-name">{currentUser?.name || userName}</span>
+              <span className="crm-header__profile-name">{userName}</span>
               <ChevronDown
                 size={18}
                 className={`crm-header__chevron ${isMenuOpen ? "is-open" : ""}`}
@@ -163,9 +156,6 @@ export default function Header() {
           </div>
         </div>
       </div>
-      {isEditOpen && (
-        <EditProfileModal isOpen={isEditOpen} onClose={handleCloseEdit} onSave={handleSaveProfile} />
-      )}
     </header>
   );
 }

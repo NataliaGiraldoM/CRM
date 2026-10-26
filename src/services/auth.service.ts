@@ -1,5 +1,3 @@
-import { API_URL } from "./api";
-
 // Tipos para la autenticación
 export interface RegisterData {
   name: string;
@@ -28,17 +26,18 @@ export interface ApiError {
   message: string;
 }
 
-const AUTH_URL = `${API_URL}/auth`;
+// URL base del backend
+const API_URL = "/api/auth";
 
 // Servicio de autenticación
 export class AuthService {
   // Registrar usuario
   static async registerUser(data: RegisterData): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${AUTH_URL}/register`, {
-        method: "POST",
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
@@ -46,7 +45,7 @@ export class AuthService {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Registration failed");
+        throw new Error(result.message || 'Registration failed');
       }
 
       return result;
@@ -54,18 +53,17 @@ export class AuthService {
       if (error instanceof Error) {
         throw error;
       }
-
-      throw new Error("Network error occurred");
+      throw new Error('Network error occurred');
     }
   }
 
   // Iniciar sesión
   static async loginUser(data: LoginData): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${AUTH_URL}/login`, {
-        method: "POST",
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
@@ -73,7 +71,7 @@ export class AuthService {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Login failed");
+        throw new Error(result.message || 'Login failed');
       }
 
       return result;
@@ -81,66 +79,30 @@ export class AuthService {
       if (error instanceof Error) {
         throw error;
       }
-
-      throw new Error("Network error occurred");
+      throw new Error('Network error occurred');
     }
   }
 
   // Guardar datos en localStorage
   static saveAuthData(token: string, user: User): void {
-    localStorage.setItem("auth_token", token);
-    localStorage.setItem("user_data", JSON.stringify(user));
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('user_data', JSON.stringify(user));
   }
 
   // Obtener datos del localStorage
-  static getAuthData(): { token: string | null; user: User | null } {
-    const token = localStorage.getItem("auth_token");
-    const userData = localStorage.getItem("user_data");
-
+  static getAuthData(): { token: string | null, user: User | null } {
+    const token = localStorage.getItem('auth_token');
+    const userData = localStorage.getItem('user_data');
+    
     return {
       token,
-      user: userData ? JSON.parse(userData) : null,
+      user: userData ? JSON.parse(userData) : null
     };
   }
 
   // Limpiar localStorage (logout)
   static clearAuthData(): void {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_data");
-  }
-
-  // Actualizar perfil en backend
-  static async updateProfile(
-    token: string | null,
-    data: { name?: string; email?: string }
-  ): Promise<User> {
-    if (!token) {
-      throw new Error("No authentication token available");
-    }
-
-    try {
-      const response = await fetch(`${AUTH_URL}/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Update failed");
-      }
-
-      return result.user as User;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-
-      throw new Error("Network error occurred");
-    }
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
   }
 }
