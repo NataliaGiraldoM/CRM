@@ -9,7 +9,7 @@ async function main(){
   const db=await pool.connect();try{
    await db.query('SELECT pg_advisory_lock(761205)');
    await db.query('CREATE TABLE IF NOT EXISTS orbit_migrations(name text PRIMARY KEY, applied_at timestamptz DEFAULT now())');
-   for(const name of ['001_access','002_catalog']) {
+   for(const name of ['001_access','002_catalog','003_inventory']) {
     if(!(await db.query('SELECT 1 FROM orbit_migrations WHERE name=$1',[name])).rowCount){
      const sql=readFileSync(resolve(__dirname,`../../migrations/${name}.sql`),'utf8');
      await db.query(sql.replace('COMMIT;',`INSERT INTO orbit_migrations(name) VALUES('${name}'); COMMIT;`));

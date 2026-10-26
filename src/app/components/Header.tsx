@@ -6,6 +6,7 @@ import {
   Cloud,
   ShieldCheck,
   Package,
+  Boxes,
   LayoutGrid,
   Users,
   CircleUserRound,
@@ -37,6 +38,7 @@ export default function Header() {
 
   const handleEditProfile = () => {
     setIsMenuOpen(false);
+    navigate("/profile");
   };
 
   const handleLogout = async () => {
@@ -92,7 +94,6 @@ export default function Header() {
         </div>
 
         <div className="crm-header__actions">
-          <LanguageSwitcher />
           <nav className="crm-header__nav" aria-label={t("Primary navigation")}>
             <NavLink
               to="/dashboard"
@@ -116,6 +117,7 @@ export default function Header() {
               <span>{t("Customers")}</span>
             </NavLink>
             <NavLink to="/products" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><Package size={20}/><span>{t("Catalog")}</span></NavLink>
+            <NavLink to="/inventory" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><Boxes size={20}/><span>{t("Inventory")}</span></NavLink>
             {user?.role === "admin" && (
               <NavLink to="/users" onClick={handleCloseMenu}
                 className={({ isActive }) => `crm-header__nav-item ${isActive ? "is-active" : ""}`}>
@@ -143,6 +145,7 @@ export default function Header() {
 
             {isMenuOpen && (
               <div className="crm-header__dropdown" role="menu">
+                <div className="crm-header__dropdown-language"><LanguageSwitcher /></div>
                 <div className="crm-header__dropdown-title">{t("My Account")}</div>
 
                 <button

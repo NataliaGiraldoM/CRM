@@ -87,6 +87,8 @@ export default function Customers() {
   const navigate = useNavigate();
   const canManage = AuthService.getAuthData().user?.role === "admin";
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [details, setDetails] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<CustomerFormState>(initialForm);
@@ -288,6 +290,7 @@ export default function Customers() {
   };
 
   const handleOpenModal = () => {
+    setEditingId(null);
     setForm(initialForm);
     setFormErrors({});
     setError("");
@@ -321,8 +324,8 @@ export default function Customers() {
           (country) => country.toLowerCase() === form.country.trim().toLowerCase() || t(country).toLowerCase() === form.country.trim().toLowerCase()
         ) || form.country.trim();
 
-      const response = await fetch(`${API_URL}/customers`, {
-        method: "POST",
+      const response = await fetch(`${API_URL}/customers${editingId ? `/${editingId}` : ""}`, {
+        method: editingId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -351,7 +354,7 @@ export default function Customers() {
       await fetchCustomers();
     } catch (err) {
       console.error("Error creating customer:", err);
-      setError("Could not save customer.");
+      setError(err instanceof Error ? err.message : "Could not save customer.");
     } finally {
       setSaving(false);
     }
@@ -525,7 +528,7 @@ export default function Customers() {
                         </span>
                       </td>
                       <td className="customers-actions-cell">
-                        {canManage && <div
+                        {<div
                           className="customers-actions"
                           ref={openMenuId === customer.id ? actionsRef : null}
                         >
@@ -544,17 +547,17 @@ export default function Customers() {
 
                           {openMenuId === customer.id && (
                             <div className="customers-actions__menu">
-                              <button type="button" className="customers-actions__item">
+                              <button type="button" className="customers-actions__item" onClick={() => { setDetails(customer); setOpenMenuId(null); }}>
                                 <Eye size={18} />
                                 <span>{t("View Details")}</span>
                               </button>
 
-                              <button type="button" className="customers-actions__item">
+                              {canManage && <button type="button" className="customers-actions__item" onClick={() => { setForm({full_name:customer.full_name,email:customer.email,phone_number:customer.phone_number,company:customer.company,status:customer.status,country:customer.country,address:customer.address}); setFormErrors({}); setError(""); setEditingId(customer.id); setOpenMenuId(null); setIsModalOpen(true); }}>
                                 <Pencil size={18} />
                                 <span>{t("Edit")}</span>
-                              </button>
+                              </button>}
 
-                              <div className="customers-actions__status-wrapper">
+                              {canManage && <div className="customers-actions__status-wrapper">
                                 <button
                                   type="button"
                                   className="customers-actions__item"
@@ -605,15 +608,15 @@ export default function Customers() {
                                     </button>
                                   </div>
                                 )}
-                              </div>
+                              </div>}
 
-                              <button
+                              {canManage && <button
                                 type="button"
                                 className="customers-actions__item"
                                 onClick={() => handleDeleteCustomer(customer.id)}
                               >
                                 <span>{t("Delete")}</span>
-                              </button>
+                              </button>}
                             </div>
                           )}
                         </div>}
@@ -627,18 +630,19 @@ export default function Customers() {
         </section>
       </main>
 
+      {details && <div className="customers-modal-backdrop" onClick={()=>setDetails(null)}><div className="customers-modal customers-modal--styled" role="dialog" aria-modal="true" aria-label={t("View Details")} onClick={e=>e.stopPropagation()}><div className="customers-modal__header customers-modal__header--styled"><h3>{t("View Details")}</h3><button type="button" onClick={()=>setDetails(null)} aria-label={t("Close")}><X size={20}/></button></div><div style={{padding:24}}>{[["Full Name",details.full_name],["Email",details.email],["Phone Number",details.phone_number],["Company",details.company],["Status",getStatusLabel(details.status)],["Country",details.country],["Address",details.address]].map(([label,value])=><p key={label}><strong>{t(label)}:</strong> {value}</p>)}</div></div></div>}
       {isModalOpen && (
         <div
           className="customers-modal-backdrop"
           onClick={handleCloseModal}
-          aria-hidden="true"
+          role="presentation"
         >
           <div
             className="customers-modal customers-modal--styled"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="customers-modal__header customers-modal__header--styled">
-              <h3>{t("Add New Customer")}</h3>
+              <h3>{t(editingId ? "Edit Customer" : "Add New Customer")}</h3>
 
               <button
                 type="button"
@@ -767,6 +771,7 @@ export default function Customers() {
                 )}
               </div>
 
+              {error && <p className="customers-field-error" role="alert">{t(error)}</p>}
               <div className="customers-modal__footer">
                 <button
                   type="button"
@@ -781,7 +786,7 @@ export default function Customers() {
                   className="customers-modal__submit customers-modal__submit--styled"
                   disabled={saving}
                 >
-                  {saving ? t("Creating...") : t("Create Customer")}
+                  {saving ? t("Saving...") : t(editingId ? "Save" : "Create Customer")}
                 </button>
               </div>
             </form>

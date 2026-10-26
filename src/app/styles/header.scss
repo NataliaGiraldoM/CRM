@@ -302,3 +302,6 @@ body {
 }
 
 @media (min-width:1025px) and (max-width:1450px){.crm-header__container{flex-direction:column;align-items:stretch;}.crm-header__actions{justify-content:space-between;margin-left:0;}.crm-header__nav-item{padding:0 16px;}}
+
+.crm-header__dropdown-language { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; }
+.crm-header__dropdown-language button { width: 100%; }

@@ -25,7 +25,8 @@ router.put('/products/:id',adminOnly,async(req:AuthRequest,res,next)=>{
  const id=String(req.params.id);if(!/^[0-9a-f-]{36}$/i.test(id))return res.status(400).json({message:'Invalid product'});
  let values:unknown[];try{values=validate(req.body);if(!Number.isSafeInteger(req.body.version)||req.body.version<1)throw new Error('Invalid product version');}catch(e){return res.status(400).json({message:(e as Error).message});}
  try{const outcome=await transaction(req.user!.id,req.body.reason.trim(),async db=>{
- const old=(await db.query('SELECT id,version FROM products WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!old)return {status:404,message:'Product not found'};
+ const old=(await db.query('SELECT id,version,kind,tracks_inventory FROM products WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!old)return {status:404,message:'Product not found'};
+ if(old.tracks_inventory && (!req.body.tracks_inventory || req.body.kind!=='product')) { const history=await db.query('SELECT 1 FROM inventory_movements WHERE product_id=$1 LIMIT 1',[id]); if(history.rows.length) return {status:409,message:'Cannot disable inventory tracking after movements exist'}; }
  if(old.version!==req.body.version)return {status:409,message:'Product changed. Refresh before editing.'};
  const r=await db.query(`UPDATE products SET code=$1,name=$2,description=$3,category=$4,kind=$5,tracks_inventory=$6,base_price=$7,tax_treatment=$8,vat_rate=$9,active=$10,updated_by=$11,updated_at=now(),version=version+1 WHERE id=$12 RETURNING *`,[...values,req.user!.id,id]);return {status:200,product:r.rows[0]};
  });res.status(outcome.status).json(outcome.product||{message:outcome.message});}
