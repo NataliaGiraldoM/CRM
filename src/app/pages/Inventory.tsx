@@ -9,13 +9,28 @@ import '../styles/audit.scss';
 import '../styles/products.scss';
 type Item={id:string;code:string;name:string;active:boolean;minimum_stock:number;stock:number;movement_count:number};
 type Movement={id:string;movement_type:string;quantity:number;before_stock:number;after_stock:number;reason:string;created_at:string;actor_name:string};
+function createRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+    const random = Math.floor(Math.random() * 16);
+
+    const value = character === "x"
+      ? random
+      : (random & 0x3) | 0x8;
+
+    return value.toString(16);
+  });
+}
 export default function Inventory(){
  const {t,language}=useLanguage();const admin=AuthService.getAuthData().user?.role==='admin';
  const [items,setItems]=useState<Item[]>([]),[error,setError]=useState(''),[message,setMessage]=useState(''),[loading,setLoading]=useState(true),[selected,setSelected]=useState<Item|null>(null),[mode,setMode]=useState<'move'|'minimum'|'history'|null>(null),[type,setType]=useState('entry'),[quantity,setQuantity]=useState(''),[reason,setReason]=useState(''),[saving,setSaving]=useState(false),[requestId,setRequestId]=useState(''),[history,setHistory]=useState<Movement[]>([]),[page,setPage]=useState(0),[search,setSearch]=useState('');
  async function load(){setLoading(true);try{setItems(await api<Item[]>('/inventory'));}catch(e){setError(e instanceof Error?e.message:'Request failed');}finally{setLoading(false);}}
  useEffect(()=>{void load();},[]);
  useEffect(()=>{if(mode==='history'&&selected){void api<Movement[]>(`/inventory/movements?product_id=${selected.id}&page=${page}`).then(setHistory).catch(e=>setError(e.message));}},[mode,selected,page]);
- function open(item:Item,next:'move'|'minimum'|'history'){setError('');setMessage('');setSelected(item);setMode(next);setType('entry');setQuantity(next==='minimum'?String(item.minimum_stock):'');setReason('');setRequestId(crypto.randomUUID());setHistory([]);setPage(0);}
+ function open(item:Item,next:'move'|'minimum'|'history'){setError('');setMessage('');setSelected(item);setMode(next);setType('entry');setQuantity(next==='minimum'?String(item.minimum_stock):'');setReason('');setRequestId(createRequestId());setHistory([]);setPage(0);}
  async function submit(e:FormEvent){e.preventDefault();if(!selected)return;setSaving(true);setError('');try{const value=Number(quantity);
  if(mode==='move')await api('/inventory/movements',{method:'POST',body:JSON.stringify({product_id:selected.id,movement_type:type,quantity:value,expected_stock:selected.stock,reason,request_id:requestId})});
  else await api(`/inventory/${selected.id}/minimum`,{method:'PATCH',body:JSON.stringify({minimum_stock:value,reason})});

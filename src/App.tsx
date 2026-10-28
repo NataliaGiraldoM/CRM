@@ -1,4 +1,5 @@
 import Inventory from "./app/pages/Inventory";
+import Sales from "./app/pages/Sales";
 import Profile from "./app/pages/Profile";
 import Products from "./app/pages/Products";
 import AccessGuard from "./app/components/AccessGuard";
@@ -20,6 +21,7 @@ export default function App() {
 
       <Route path="/profile" element={<AccessGuard><Profile /></AccessGuard>} />
       <Route path="/inventory" element={<AccessGuard><Inventory /></AccessGuard>} />
+      <Route path="/sales" element={<AccessGuard><Sales /></AccessGuard>} />
       <Route path="/products" element={<AccessGuard><Products /></AccessGuard>} />
       <Route path="/users" element={<AccessGuard admin><Users /></AccessGuard>} />
       <Route path="*" element={<Navigate to="/login" replace />} />

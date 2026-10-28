@@ -47,6 +47,27 @@ type Customer = {
   updated_at: string;
 };
 
+type MonthlySales = {
+  month: string;
+  revenue: number | string;
+  sales_count: number;
+};
+
+type BestSellingProduct = {
+  product_name: string;
+  quantity_sold: number;
+  revenue: number | string;
+};
+
+type SalesSummary = {
+  sales_count: number;
+  revenue: number | string;
+  average_sale: number | string;
+  cancelled_count: number;
+  monthly: MonthlySales[];
+  best_products: BestSellingProduct[];
+};
+
 const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
 
 export default function Dashboard() {
@@ -55,6 +76,9 @@ export default function Dashboard() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
+  const [salesLoading, setSalesLoading] = useState(true);
 
   const fetchCustomers = async (tokenParam?: string) => {
     try {
@@ -91,6 +115,41 @@ export default function Dashboard() {
     }
   };
 
+  const fetchSalesSummary = async (tokenParam?: string) => {
+  try {
+    const { token: storedToken } = AuthService.getAuthData();
+    const token = tokenParam || storedToken;
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/sales/summary`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 401) {
+      navigate("/login");
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch sales summary");
+    }
+
+    const data: SalesSummary = await response.json();
+    setSalesSummary(data);
+  } catch (error) {
+    console.error("Error loading dashboard sales:", error);
+  } finally {
+    setSalesLoading(false);
+  }
+};
+
   useEffect(() => {
     const { token } = AuthService.getAuthData();
 
@@ -100,10 +159,13 @@ export default function Dashboard() {
     }
 
     setLoading(true);
+    setSalesLoading(true);
     fetchCustomers(token);
+    fetchSalesSummary(token);
 
     const interval = setInterval(() => {
       fetchCustomers(token);
+      fetchSalesSummary(token);
     }, 5000);
 
     return () => clearInterval(interval);
@@ -125,6 +187,13 @@ export default function Dashboard() {
 
   const percentage = (value: number, total: number) =>
     total === 0 ? 0 : Number(((value / total) * 100).toFixed(1));
+
+  const formatCurrency = (value: number | string) =>
+    new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
 
   const statusDistributionData = {
     labels: [t("Active"), t("Pending"), t("Inactive")],
@@ -224,6 +293,55 @@ export default function Dashboard() {
         beginAtZero: true,
         grid: { color: "#e5e7eb" },
         ticks: { stepSize: 1 },
+      },
+    },
+  };
+
+  const monthlySalesData = useMemo(() => {
+    const monthsData = salesSummary?.monthly ?? [];
+    const formatter = new Intl.DateTimeFormat(language, {
+      month: "short",
+      year: "2-digit",
+    });
+
+    const labels = monthsData.map(({ month }) => {
+      const [year, monthNumber] = month.split("-").map(Number);
+      return formatter.format(new Date(year, monthNumber - 1, 1));
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: t("Revenue"),
+          data: monthsData.map((item) => Number(item.revenue) || 0),
+          backgroundColor: "#14b8a6",
+          borderRadius: 6,
+        },
+      ],
+    };
+  }, [salesSummary, language, t]);
+
+  const salesBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (context: TooltipItem<"bar">) =>
+            `${t("Revenue")}: ${formatCurrency(Number(context.parsed.y))}`,
+        },
+      },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value: string | number) => formatCurrency(Number(value)),
+        },
+        grid: { color: "#e5e7eb" },
       },
     },
   };
@@ -360,6 +478,36 @@ export default function Dashboard() {
           </article>
         </section>
 
+        <section className="dashboard-cards dashboard-sales-cards">
+          <article className="dashboard-card">
+            <p className="dashboard-card-label">{t("Completed sales")}</p>
+            <p className="dashboard-card-value">
+              {salesLoading ? "..." : salesSummary?.sales_count ?? 0}
+            </p>
+            <p className="dashboard-card-helper">{t("Excludes cancelled sales")}</p>
+          </article>
+
+          <article className="dashboard-card">
+            <p className="dashboard-card-label">{t("Revenue")}</p>
+            <p className="dashboard-card-value">
+              {salesLoading ? "..." : formatCurrency(salesSummary?.revenue ?? 0)}
+            </p>
+            <p className="dashboard-card-helper dashboard-card-helper--success">
+              {t("From completed sales")}
+            </p>
+          </article>
+
+          <article className="dashboard-card">
+            <p className="dashboard-card-label">{t("Average sale")}</p>
+            <p className="dashboard-card-value">
+              {salesLoading ? "..." : formatCurrency(salesSummary?.average_sale ?? 0)}
+            </p>
+            <p className="dashboard-card-helper">
+              {t("Average value per completed sale")}
+            </p>
+          </article>
+        </section>
+
         <section className="dashboard-grid-2">
           <article className="dashboard-panel">
             <header className="dashboard-panel-header">
@@ -415,6 +563,27 @@ export default function Dashboard() {
 
             <div className="dashboard-panel-body dashboard-panel-body--large">
               <Line data={customerTrendsOverTimeData} options={lineOptions} />
+            </div>
+          </article>
+        </section>
+
+        <section className="dashboard-row">
+          <article className="dashboard-panel">
+            <header className="dashboard-panel-header">
+              <h3 className="dashboard-panel-title">{t("Monthly sales revenue")}</h3>
+              <p className="dashboard-panel-subtitle">
+                {t("Revenue from completed sales during the last six months")}
+              </p>
+            </header>
+
+            <div className="dashboard-panel-body dashboard-panel-body--large">
+              {salesLoading ? (
+                <p>{t("Loading sales...")}</p>
+              ) : monthlySalesData.labels.length > 0 ? (
+                <Bar data={monthlySalesData} options={salesBarOptions} />
+              ) : (
+                <p>{t("No sales data yet.")}</p>
+              )}
             </div>
           </article>
         </section>
