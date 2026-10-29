@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-
-dotenv.config({ path: "src/.env" });
+import "./config/env";
 
 import app from "./app";
 

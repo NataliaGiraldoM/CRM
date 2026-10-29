@@ -1,3 +1,4 @@
+import { API_BASE } from './api-url';
 // Tipos para la autenticación
 export interface RegisterData {
   name: string;
@@ -29,7 +30,7 @@ export interface ApiError {
 }
 
 // URL base del backend
-const API_URL = "/api/auth";
+const API_URL = `${API_BASE}/auth`;
 
 // Servicio de autenticación
 export class AuthService {

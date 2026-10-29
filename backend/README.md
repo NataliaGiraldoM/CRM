@@ -1,149 +1,23 @@
-# CRM Backend - Auth Module
+# Backend ORBIT
 
-Backend para el sistema CRM con funcionalidad de registro de usuarios.
+Desde esta carpeta: `npm ci`, `npm run build`, `npm run db:migrate`, `npm run dev`.
 
-## Estructura del Proyecto
+Configuración en **backend/.env**: `DATABASE_URL`, `JWT_SECRET`, `PORT=5000`. En Render se pueden definir directamente como variables de entorno. El código carga la misma ruta tanto desde src como desde dist; las variables del entorno tienen prioridad.
 
-```
-src/
-├── controllers/
-│   └── auth.controller.ts    # Controladores de autenticación
-├── routes/
-│   └── auth.routes.ts        # Rutas de autenticación
-├── services/
-│   └── auth.service.ts       # Lógica de negocio de autenticación
-├── models/
-│   └── user.model.ts         # Interfaces y tipos de usuario
-├── app.ts                    # Configuración de Express
-└── server.ts                 # Servidor principal
-```
+Para actualizar una instalación existente y cargar datos ficticios consulta `../LEEME_ACTUALIZACION.md`. La base original está en `../creacion-diagrama.sql`; las cinco migraciones agregan acceso, catálogo, inventario, ventas y el enlace de la venta a su salida real de inventario. El esquema completo para una base nueva está en `../scripts/04_creacion_completa_solo_bd_nueva.sql`.
 
-## Instalación
+Rutas bajo `/api`:
 
-```bash
-npm install
-```
+- `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/profile`, `/auth/activity`.
+- `/customers`: consulta y gestión de clientes.
+- `/admin/users`, `/admin/sessions`, `/admin/audit`: gestión y supervisión administrativa.
+- `/products`: catálogo.
+- `/inventory`, `/inventory/movements`, `/inventory/:id/minimum`: saldos, movimientos y mínimos.
+- `/sales`, `/sales/:id`, `/sales/:id/cancel`: registro, detalle y anulación.
+- `/sales/summary`, `/sales/report`, `/sales/export`: indicadores, reportes y CSV.
 
-## Ejecución
+Las consultas de ventas y reportes devuelven `{sales, summary, pagination, ...}`. Admiten `from`, `to`, `customer_id`, `product_id`, `status`, `search`, `page` y `page_size` (máximo 200; por defecto 50). El CSV usa los mismos filtros sin límite de página. Cuando se filtra por producto, los importes del reporte corresponden únicamente a sus líneas; el endpoint de detalle devuelve la venta completa.
 
-### Modo desarrollo
-```bash
-npm run dev
-```
+Las lecturas de reportes se ejecutan en una transacción de solo lectura con una instantánea consistente. Los usuarios de consulta no pueden modificar clientes, catálogo, inventario o ventas. El administrador inicial se habilita con `npm run admin:bootstrap -- correo@ejemplo.com` después de registrar la cuenta, únicamente si aún no hay otro administrador activo.
 
-### Modo producción
-```bash
-npm run build
-npm start
-```
-
-## API Endpoints
-
-### POST /api/auth/register
-
-Registra un nuevo usuario en el sistema.
-
-**Request Body:**
-```json
-{
-  "name": "string",
-  "email": "string",
-  "password": "string"
-}
-```
-
-**Response Exitoso (201):**
-```json
-{
-  "message": "User registered successfully",
-  "user": {
-    "id": "uuid",
-    "name": "string",
-    "email": "string"
-  }
-}
-```
-
-**Response de Error (400):**
-```json
-{
-  "message": "Error description"
-}
-```
-
-## Validaciones
-
-- Todos los campos son obligatorios
-- Email debe tener formato válido
-- Password debe tener mínimo 6 caracteres
-- No permite emails duplicados
-
-## Pruebas con Postman
-
-1. **Configurar Postman:**
-   - Método: POST
-   - URL: `http://localhost:5000/api/auth/register`
-   - Headers: `Content-Type: application/json`
-
-2. **Body (raw JSON):**
-```json
-{
-  "name": "Juan Pérez",
-  "email": "juan@example.com",
-  "password": "123456"
-}
-```
-
-3. **Ejemplos de prueba:**
-
-   **Registro exitoso:**
-   ```json
-   {
-     "name": "Ana García",
-     "email": "ana@example.com", 
-     "password": "password123"
-   }
-   ```
-
-   **Email inválido:**
-   ```json
-   {
-     "name": "Test",
-     "email": "email-invalido",
-     "password": "123456"
-   }
-   ```
-
-   **Password muy corto:**
-   ```json
-   {
-     "name": "Test",
-     "email": "test@example.com",
-     "password": "123"
-   }
-   ```
-
-   **Email duplicado:**
-   ```json
-   {
-     "name": "Otro Usuario",
-     "email": "ana@example.com",
-     "password": "password456"
-   }
-   ```
-
-## Características
-
-- ✅ TypeScript con tipos e interfaces
-- ✅ Almacenamiento temporal en memoria
-- ✅ Hash de contraseñas con bcryptjs
-- ✅ Validaciones de entrada
-- ✅ CORS habilitado
-- ✅ Manejo de errores
-- ✅ IDs únicos con UUID
-
-## Notas
-
-- Los datos se almacenan en memoria y se pierden al reiniciar el servidor
-- No se implementa login todavía (solo registro)
-- La contraseña nunca se devuelve en la respuesta
+Las pruebas (`npm test`, después de instalar `../tests`) utilizan una base PGlite aislada, no la conexión de este .env.

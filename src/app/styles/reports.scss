@@ -1,0 +1,10 @@
+.orbit-report-content { padding: 20px; }
+.orbit-report-filters { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: 16px; align-items: end;
+ label { display: grid; gap: 8px; min-width: 0; }
+ input, select { width: 100%; min-width: 0; box-sizing: border-box; }
+}
+.orbit-sale-dialog { width: min(920px,90vw); max-height: 85vh; border: 1px solid #dbe5f0; border-radius: 18px; padding: 24px; color: #16324f; font-family: inherit;
+ &::backdrop { background: rgba(15,23,42,.55); }
+ table { width: 100%; border-collapse: collapse; }
+ td,th { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+}

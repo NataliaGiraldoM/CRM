@@ -61,7 +61,7 @@ export const CustomerService = {
     const values = [
       data.owner_user_id,
       data.full_name,
-      data.email,
+      data.email.trim().toLowerCase(),
       data.phone_number,
       data.company,
       data.status,

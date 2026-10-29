@@ -1,3 +1,4 @@
+import { API_BASE } from '../../services/api-url';
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -68,7 +69,7 @@ type SalesSummary = {
   best_products: BestSellingProduct[];
 };
 
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
+const API_URL = API_BASE;
 
 export default function Dashboard() {
   const { t, language } = useLanguage();
@@ -555,9 +556,9 @@ export default function Dashboard() {
         <section className="dashboard-row">
           <article className="dashboard-panel">
             <header className="dashboard-panel-header">
-              <h3 className="dashboard-panel-title">{t("Customer Trends Over Time")}</h3>
+              <h3 className="dashboard-panel-title">{t("Current status by customer creation month")}</h3>
               <p className="dashboard-panel-subtitle">
-                {t("6-month customer status trend analysis")}
+                {t("Current status of customers grouped by creation month; this is not historical status evolution.")}
               </p>
             </header>
 

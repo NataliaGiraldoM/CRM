@@ -16,7 +16,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = language;
     try { localStorage.setItem('orbit-language', language); } catch { /* Storage may be disabled. */ }
   }, [language]);
-  const value = useMemo(() => ({ language, setLanguage, t: (text: string) => language === 'es' ? translations[text] ?? text : text }), [language]);
+  const value = useMemo(() => ({ language, setLanguage, t: (text: string) => language === 'es' ? translations[text] ?? text.replace(/^Insufficient stock for (.+)\. Available: (\d+)$/, 'Existencias insuficientes para $1. Disponibles: $2') : text }), [language]);
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 

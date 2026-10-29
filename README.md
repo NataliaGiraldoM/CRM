@@ -1,71 +1,15 @@
-# CRM-TIC2
+# ORBIT CRM
 
-Aplicación CRM desarrollada como proyecto académico de TIC2.  
-El sistema está dividido en:
+CRM académico para centralizar clientes, catálogo de productos y servicios, inventario, ventas, usuarios y analítica descriptiva.
 
-- **Frontend:** React + TypeScript + Vite + SCSS
-- **Backend:** Node.js + Express + TypeScript
-- **Persistencia:** base de datos en la nube
-- **Autenticación:** módulo de registro de usuarios
+Empieza por **LEEME_ACTUALIZACION.md**: contiene los pasos para actualizar una BD existente, iniciar el proyecto y comprobar cada módulo con los scripts de demostración.
 
-## Objetivo del proyecto
+- Frontend: React, TypeScript, Vite y Sass.
+- Backend: Express, TypeScript y PostgreSQL.
+- Roles: administrador y usuario de consulta (`admin` / `viewer`).
+- Auditoría de cambios, sesiones y revocación de accesos.
+- Reportes filtrados, comparación entre períodos, frecuencia y concentración por cliente, productos más/menos vendidos, detalle de compras y CSV completo.
 
-Este proyecto busca centralizar la gestión de usuarios y operaciones relacionadas con un CRM básico, con una arquitectura separada entre frontend y backend.
+Los archivos SQL están en `scripts/`. La carga de demostración es opcional, ficticia y repetible. No se incluyen credenciales reales.
 
-## Funcionalidades actuales
-
-- Registro de usuarios
-- Login y navegación entre vistas
-- Dashboard básico
-- Backend con módulo de autenticación
-- Validaciones de entrada en el backend
-- Hash de contraseñas con `bcryptjs`
-- Uso de TypeScript en frontend y backend
-
-## Stack tecnológico
-
-### Frontend
-- React 19
-- TypeScript
-- Vite
-- React Router DOM
-- SCSS
-- Material UI
-- Emotion
-- Lucide React
-
-### Backend
-- Node.js
-- Express
-- TypeScript
-- CORS
-- dotenv
-- bcryptjs
-- jsonwebtoken
-- uuid
-- pg
-
-## Estructura general del proyecto
-
-```text
-CRM-TIC2/
-├── src/                  # Frontend
-│   ├── app/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── styles/
-│   │   └── router.tsx
-│   ├── App.tsx
-│   └── main.tsx
-├── backend/              # Backend
-│   └── src/
-│       ├── app.ts
-│       ├── server.ts
-│       ├── config/
-│       ├── controllers/
-│       ├── models/
-│       ├── routes/
-│       ├── services/
-│       └── utils/
-├── public/
-└── README.md
+Instala dependencias con `npm ci` en la raíz y en `backend`. Para las pruebas instala también con `npm ci` dentro de `tests`. Luego, desde la raíz, ejecuta `npm run test:integration` y `npm run build`.

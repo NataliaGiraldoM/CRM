@@ -106,6 +106,7 @@ export const CustomerController = {
 
       return res.status(200).json({ message: "Customer deleted successfully" });
     } catch (error) {
+      if (['23503','23001'].includes((error as any)?.code)) return res.status(409).json({message:"This customer has sales. Deactivate the customer to preserve purchase history."});
       console.error("Error deleting customer:", error);
       return res.status(500).json({ message: "Internal server error" });
     }

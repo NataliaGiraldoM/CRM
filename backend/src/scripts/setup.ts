@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../config/env';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { pool } from '../config/db';
@@ -9,7 +9,7 @@ async function main(){
   const db=await pool.connect();try{
    await db.query('SELECT pg_advisory_lock(761205)');
    await db.query('CREATE TABLE IF NOT EXISTS orbit_migrations(name text PRIMARY KEY, applied_at timestamptz DEFAULT now())');
-   for(const name of ['001_access','002_catalog','003_inventory','004_sales']) {
+   for(const name of ['001_access','002_catalog','003_inventory','004_sales','005_sales_inventory_snapshot']) {
     if(!(await db.query('SELECT 1 FROM orbit_migrations WHERE name=$1',[name])).rowCount){
      const sql=readFileSync(resolve(__dirname,`../../migrations/${name}.sql`),'utf8');
      await db.query(sql.replace('COMMIT;',`INSERT INTO orbit_migrations(name) VALUES('${name}'); COMMIT;`));

@@ -1,0 +1,5 @@
+export type Sale = {id:string;customer_id:string;customer_name:string;customer_company?:string;seller_name:string;sale_date:string;status:'completed'|'cancelled';subtotal:string;tax_total:string;total:string;notes:string;item_count:number};
+export type SaleDetail = Sale & {items:{id:string;product_name:string;product_code:string;quantity:number;unit_price:string;vat_rate:string;tax_amount:string;total:string}[]};
+export type Summary = {sales_count:number;revenue:string;average_sale:string;cancelled_count:number;purchasing_customers:number;purchase_frequency:string};
+export type Pagination = {page:number;page_size:number;total:number;total_pages:number};
+export type Report = {sales:Sale[];summary:Summary;previous_summary:Summary|null;previous_range:{from:string;to:string}|null;pagination:Pagination;customers:{customer_id:string;customer_name:string;purchases:number;revenue:string;last_purchase:string|null;previous_purchases:number;previous_revenue:string;share:number;declining:boolean}[];products:{id:string;code:string;name:string;kind:string;active:boolean;quantity_sold:string;revenue:string}[]};

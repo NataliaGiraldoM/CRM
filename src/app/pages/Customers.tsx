@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { API_BASE } from '../../services/api-url';
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -44,7 +46,7 @@ type CustomerFormState = {
 
 type FormErrors = Partial<Record<keyof CustomerFormState, string>>;
 
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
+const API_URL = API_BASE;
 
 const initialForm: CustomerFormState = {
   full_name: "",
@@ -385,7 +387,8 @@ export default function Customers() {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to delete customer");
+        const data=await response.json().catch(()=>({}));
+        throw new Error(data.message || "Failed to delete customer");
       }
 
       setOpenMenuId(null);
@@ -393,7 +396,7 @@ export default function Customers() {
       await fetchCustomers();
     } catch (err) {
       console.error("Error deleting customer:", err);
-      setError("Could not delete customer.");
+      setError(err instanceof Error ? err.message : "Could not delete customer.");
     }
   };
 
@@ -458,6 +461,7 @@ export default function Customers() {
       <Header />
 
       <main className="customers-main">
+        {error && !isModalOpen && <p className="customers-field-error" role="alert">{t(error)}</p>}
         <section className="customers-panel">
           <div className="customers-panel__top">
             <div>
@@ -630,7 +634,7 @@ export default function Customers() {
         </section>
       </main>
 
-      {details && <div className="customers-modal-backdrop" onClick={()=>setDetails(null)}><div className="customers-modal customers-modal--styled" role="dialog" aria-modal="true" aria-label={t("View Details")} onClick={e=>e.stopPropagation()}><div className="customers-modal__header customers-modal__header--styled"><h3>{t("View Details")}</h3><button type="button" onClick={()=>setDetails(null)} aria-label={t("Close")}><X size={20}/></button></div><div style={{padding:24}}>{[["Full Name",details.full_name],["Email",details.email],["Phone Number",details.phone_number],["Company",details.company],["Status",getStatusLabel(details.status)],["Country",details.country],["Address",details.address]].map(([label,value])=><p key={label}><strong>{t(label)}:</strong> {value}</p>)}</div></div></div>}
+      {details && <div className="customers-modal-backdrop" onClick={()=>setDetails(null)}><div className="customers-modal customers-modal--styled" role="dialog" aria-modal="true" aria-label={t("View Details")} onClick={e=>e.stopPropagation()}><div className="customers-modal__header customers-modal__header--styled"><h3>{t("View Details")}</h3><button type="button" onClick={()=>setDetails(null)} aria-label={t("Close")}><X size={20}/></button></div><div style={{padding:24}}><p><Link className="orbit-admin-btn" to={`/reports?customer_id=${details.id}`}>{t("Purchase history")}</Link></p>{[["Full Name",details.full_name],["Email",details.email],["Phone Number",details.phone_number],["Company",details.company],["Status",getStatusLabel(details.status)],["Country",details.country],["Address",details.address]].map(([label,value])=><p key={label}><strong>{t(label)}:</strong> {value}</p>)}</div></div></div>}
       {isModalOpen && (
         <div
           className="customers-modal-backdrop"

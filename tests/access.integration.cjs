@@ -6,6 +6,8 @@ await db.exec(fs.readFileSync(path.resolve(base,'../creacion-diagrama.sql'),'utf
 await db.exec(fs.readFileSync(base+'/migrations/001_access.sql','utf8'));
 await db.exec(fs.readFileSync(base+'/migrations/002_catalog.sql','utf8'));
 await db.exec(fs.readFileSync(base+'/migrations/003_inventory.sql','utf8'));
+await db.exec(fs.readFileSync(base+'/migrations/004_sales.sql','utf8'));
+await db.exec(fs.readFileSync(base+'/migrations/005_sales_inventory_snapshot.sql','utf8'));
 const {randomUUID}=require('crypto');
 let tail=Promise.resolve();async function acquire(){const before=tail;let release;tail=new Promise(r=>release=r);await before;return release;}
 const query=async(sql,args)=>{const r=await db.query(sql,args);return {...r,rowCount:r.affectedRows??r.rows.length};};
@@ -65,6 +67,37 @@ const movements=await request('GET',`/inventory/movements?product_id=${pid}`,nul
 await assert.rejects(()=>db.exec('DELETE FROM inventory_movements'));
 assert.equal((await request('PUT',`/products/${pid}`,{...change,version:3,tracks_inventory:false},token)).status,409);
 const invAudit=await request('GET','/admin/audit',null,token);assert(invAudit.data.some(e=>e.entity==='inventory_movements'&&e.actor_user_id===a.data.user.id));
+
+// Regression: sales preserve the original inventory exit, independently of later catalogue settings.
+await request('PATCH',`/customers/${customer.data.id}/status`,{status:'active'},token);
+const sid=(await request('GET','/products',null,token)).data.find(p=>p.code==='SERV-001').id;
+const salePayload={customer_id:customer.data.id,items:[{product_id:pid,quantity:2},{product_id:sid,quantity:1}]};
+assert.equal((await request('POST','/sales',salePayload,vt)).status,403);
+const sold=await request('POST','/sales',salePayload,token);assert.equal(sold.status,201,JSON.stringify(sold));
+assert.equal((await request('GET','/inventory',null,token)).data.find(p=>p.id===pid).stock,15);
+const detail=(await request('GET',`/sales/${sold.data.id}`,null,vt)).data;
+assert.equal(detail.items.length,2);assert(detail.items.find(i=>i.product_id===pid).inventory_movement_id);
+const filtered=(await request('GET',`/sales/report?product_id=${pid}`,null,vt)).data;
+assert.equal(Number(filtered.summary.revenue),476);assert.equal(Number(filtered.sales[0].total),476);
+assert.equal(filtered.summary.purchasing_customers,1);assert.equal(Number(filtered.summary.purchase_frequency),1);
+assert.equal(filtered.customers[0].share,100);assert(filtered.products.every(p=>p.id===pid));
+const deniedDelete=await request('DELETE',`/customers/${customer.data.id}`,null,token);
+assert.equal(deniedDelete.status,409);assert.match(deniedDelete.data.message,/Deactivate/);
+for(const q of ['from=2026-02-30','from=2026-02-10&to=2026-01-01','page=0','page_size=999','customer_id=broken']) assert.equal((await request('GET',`/sales/report?${q}`,null,token)).status,400,q);
+assert.equal((await request('POST',`/sales/${sold.data.id}/cancel`,{reason:'Regression cancellation'},token)).status,200);
+assert.equal((await request('GET','/inventory',null,token)).data.find(p=>p.id===pid).stock,17);
+assert.equal((await request('POST',`/sales/${sold.data.id}/cancel`,{reason:'Repeated cancellation'},token)).status,409);
+assert.equal((await request('GET','/sales/summary',null,token)).data.sales_count,0);
+const untracked={...item,code:'UNTRACKED',tracks_inventory:false};
+const up=(await request('POST','/products',untracked,token)).data;
+const us=await request('POST','/sales',{customer_id:customer.data.id,items:[{product_id:up.id,quantity:2}]},token);assert.equal(us.status,201);
+assert.equal((await request('PUT',`/products/${up.id}`,{...untracked,tracks_inventory:true,version:1,reason:'Enable stock tracking'},token)).status,200);
+assert.equal((await request('POST',`/sales/${us.data.id}/cancel`,{reason:'Previously untracked'},token)).status,200);
+assert.equal((await request('GET','/inventory',null,token)).data.find(p=>p.id===up.id).stock,0);
+const priceBefore=Number((await query('SELECT count(*)::integer AS n FROM sales')).rows[0].n);
+const overflow=await request('POST','/sales',{customer_id:customer.data.id,items:[{product_id:pid,quantity:100}]},token);assert.equal(overflow.status,409);
+assert.equal(Number((await query('SELECT count(*)::integer AS n FROM sales')).rows[0].n),priceBefore);
+console.log('PASS sales regressions: selected-line totals, access, details, cancellation snapshot, no phantom stock, no double cancellation, meaningful delete conflict and input validation.');
 console.log('PASS inventory: viewer access, admin-only changes, adjustment, exit, retry idempotence, stale balance, negative stock, minimum, immutable history and audit.');
 assert.equal((await request('PUT',`/products/${created.data.id}`,{...change,version:3,active:false},token)).status,200);
 const catalogAudit=await request('GET','/admin/audit',null,token);assert(catalogAudit.data.some(e=>e.entity==='products'&&e.action==='UPDATE'&&e.before_data.base_price===100.05&&e.after_data.base_price===200));
@@ -80,6 +113,41 @@ const sessions=await request('GET','/admin/sessions',null,token);assert.equal(se
 await query("UPDATE user_sessions SET last_seen_at=now()-interval '29 minutes' WHERE user_id=$1 AND revoked_at IS NULL",[viewerId]);const before=(await query('SELECT last_seen_at FROM user_sessions WHERE user_id=$1 AND revoked_at IS NULL',[viewerId])).rows[0].last_seen_at;
 await request('GET','/customers',null,al.data.token);const after=(await query('SELECT last_seen_at FROM user_sessions WHERE user_id=$1 AND revoked_at IS NULL',[viewerId])).rows[0].last_seen_at;assert.equal(String(before),String(after));
 await request('POST','/auth/activity',{},al.data.token);await query("UPDATE user_sessions SET last_seen_at=now()-interval '31 minutes' WHERE user_id=$1 AND revoked_at IS NULL",[viewerId]);assert.equal((await request('GET','/customers',null,al.data.token)).status,401);
+
+// Run the exact DBeaver demo script twice: second execution must be a no-op.
+const demo=fs.readFileSync(path.resolve(base,'../scripts/01_datos_demostracion.sql'),'utf8').replace('TU_CORREO_ADMIN_AQUI','admin@test.co');
+await db.exec(demo);
+const countDemo=async()=>Number((await query("SELECT count(*)::integer AS n FROM sales WHERE notes LIKE 'DEMO: venta ficticia %'")).rows[0].n);
+assert.equal(await countDemo(),90);await db.exec(demo);assert.equal(await countDemo(),90);
+const all=await request('GET','/sales/report?search=DEMO&page_size=50',null,token);assert.equal(all.status,200,JSON.stringify(all));
+assert.equal(all.data.pagination.total,90);assert.equal(all.data.sales.length,50);assert.equal(all.data.summary.sales_count,84);assert.equal(all.data.summary.cancelled_count,6);
+const page2=await request('GET','/sales/report?search=DEMO&page_size=50&page=2',null,token);assert.equal(page2.data.sales.length,40);
+assert.equal(new Set([...all.data.sales,...page2.data.sales].map(x=>x.id)).size,90);
+assert.equal(Number(all.data.summary.revenue),Number(page2.data.summary.revenue));
+assert(all.data.products.some(p=>p.code==='ORBIT-DEMO-07'&&Number(p.quantity_sold)===0));
+const sumShare=all.data.customers.reduce((sum,c)=>sum+c.share,0);assert(Math.abs(sumShare-100)<0.000001);
+const dates=(await query("SELECT current_date::text AS today,(current_date-29)::text AS start")).rows[0];
+const comparison=await request('GET',`/sales/report?search=DEMO&from=${dates.start}&to=${dates.today}`,null,token);
+assert.equal(comparison.status,200,JSON.stringify(comparison));assert(comparison.data.previous_summary);assert(comparison.data.customers.some(c=>c.declining));
+const exporter=await fetch(url+'/api/sales/export?search=DEMO&language=es',{headers:{Authorization:`Bearer ${token}`}});
+assert.equal(exporter.status,200);const csv=await exporter.text();assert.equal(csv.split('\r\n').length,91);assert.match(csv,/Cliente/);
+const {reportCsv}=require(base+'/dist/services/sales-report.service.js');assert.match(reportCsv([{customer_name:'=1+1',sale_date:new Date(),status:'completed'}],true),/'=1\+1/);
+await db.exec(fs.readFileSync(path.resolve(base,'../scripts/06_revision_anulaciones_anteriores.sql'),'utf8'));
+const checks=fs.readFileSync(path.resolve(base,'../scripts/02_comprobaciones.sql'),'utf8');await db.exec(checks);
+assert.equal(Number((await query("SELECT count(*)::integer AS n FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.notes LIKE 'DEMO: venta ficticia %' AND (si.subtotal<>si.quantity*si.unit_price OR si.total<>si.subtotal+si.tax_amount OR si.tax_amount<>round(si.subtotal*si.vat_rate/100,2))")).rows[0].n),0);
+assert.equal((await query("SELECT after_stock FROM inventory_movements WHERE product_id=md5('orbit-demo-product-8')::uuid ORDER BY movement_order DESC LIMIT 1")).rows[0].after_stock,3);
+assert.equal((await query("SELECT after_stock FROM inventory_movements WHERE product_id=md5('orbit-demo-product-9')::uuid ORDER BY movement_order DESC LIMIT 1")).rows[0].after_stock,0);
+
+const usersDemo=fs.readFileSync(path.resolve(base,'../scripts/03_usuarios_sesiones_demo.sql'),'utf8').replace('TU_CORREO_ADMIN_AQUI','admin@test.co');
+await db.exec(usersDemo);await db.exec(usersDemo);
+const dl=await request('POST','/auth/login',{email:'orbit-demo-consulta@example.invalid',password:'OrbitDemo2026!'});assert.equal(dl.status,200);
+assert.equal((await request('GET','/sales/report',null,dl.data.token)).status,200);
+assert.equal((await request('POST','/sales',salePayload,dl.data.token)).status,403);
+assert.equal((await request('GET','/admin/users',null,dl.data.token)).status,403);
+for(const address of ['orbit-demo-pendiente@example.invalid','orbit-demo-inactivo@example.invalid']) assert.equal((await request('POST','/auth/login',{email:address,password:'OrbitDemo2026!'})).status,400);
+const demoSessions=(await request('GET','/admin/sessions',null,token)).data;
+for(const state of ['idle','expired','revoked','active']) assert(demoSessions.some(s=>s.state===state),state);
+console.log('PASS demo/reporting: exact SQL scripts, repeated seed, 90 rows across pages, full CSV, formula neutralization, equal-period comparison, declining clients, frequency, concentration, zero-sale products, VAT and low stock.');
 assert.equal((await request('POST','/auth/logout',{},token)).status,200);assert.equal((await request('GET','/admin/users',null,token)).status,401);
 console.log('PASS: PostgreSQL schema/migration; pending registration ignores role escalation; admin approval; viewer mutation and admin endpoints denied; self-change denied; customer audit records actor; audit excludes secrets and rejects deletion; deactivation/role change/logout revoke JWT; idle timeout and GET polling verified.');
 }finally{await new Promise(r=>server.close(r));await db.close();}

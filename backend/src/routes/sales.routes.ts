@@ -1,3 +1,4 @@
+import { reportFilters, salesReport, ReportInputError, reportCsv } from '../services/sales-report.service';
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { pool } from '../config/db';
@@ -9,18 +10,8 @@ router.use(authMiddleware);
 const validId = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 router.get('/sales', async (req, res, next) => {
-  try {
-    const from = typeof req.query.from === 'string' ? req.query.from : null;
-    const to = typeof req.query.to === 'string' ? req.query.to : null;
-    const status = typeof req.query.status === 'string' ? req.query.status : 'all';
-    if (status !== 'all' && !['completed', 'cancelled'].includes(status)) return res.status(400).json({ message: 'Invalid sale status' });
-    const result = await pool.query(`SELECT s.id,s.customer_id,c.full_name AS customer_name,c.company AS customer_company,s.created_by,u.full_name AS seller_name,s.sale_date,s.status,s.subtotal,s.tax_total,s.total,s.notes,s.created_at,
-      (SELECT count(*)::integer FROM sale_items si WHERE si.sale_id=s.id) AS item_count
-      FROM sales s JOIN customers c ON c.id=s.customer_id JOIN users u ON u.id=s.created_by
-      WHERE ($1::text IS NULL OR s.sale_date >= $1::date) AND ($2::text IS NULL OR s.sale_date < ($2::date + interval '1 day')) AND ($3='all' OR s.status=$3)
-      ORDER BY s.sale_date DESC LIMIT 500`, [from, to, status]);
-    res.json(result.rows);
-  } catch (error) { next(error); }
+  try { res.json(await salesReport(reportFilters(req))); }
+  catch(e) { if(e instanceof ReportInputError) return res.status(400).json({message:e.message}); next(e); }
 });
 
 router.get('/sales/summary', async (_req, res, next) => {
@@ -30,39 +21,22 @@ router.get('/sales/summary', async (_req, res, next) => {
       COALESCE(avg(total) FILTER (WHERE status='completed'),0)::numeric(14,2) AS average_sale,
       count(*) FILTER (WHERE status='cancelled')::integer AS cancelled_count FROM sales`);
     const monthly = await pool.query(`SELECT to_char(date_trunc('month',sale_date),'YYYY-MM') AS month, COALESCE(sum(total),0)::numeric(14,2) AS revenue, count(*)::integer AS sales_count FROM sales WHERE status='completed' AND sale_date >= date_trunc('month',now()) - interval '5 months' GROUP BY 1 ORDER BY 1`);
-    const best = await pool.query(`SELECT si.product_name, sum(si.quantity)::integer AS quantity_sold, sum(si.total)::numeric(14,2) AS revenue FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.status='completed' GROUP BY si.product_id,si.product_name ORDER BY quantity_sold DESC,revenue DESC LIMIT 5`);
+    const best = await pool.query(`SELECT p.id AS product_id,p.name AS product_name, sum(si.quantity)::bigint AS quantity_sold, sum(si.total) AS revenue FROM sale_items si JOIN products p ON p.id=si.product_id JOIN sales s ON s.id=si.sale_id WHERE s.status='completed' GROUP BY p.id,p.name ORDER BY quantity_sold DESC,revenue DESC,p.id LIMIT 5`);
     res.json({ ...result.rows[0], monthly: monthly.rows, best_products: best.rows });
   } catch (error) { next(error); }
 });
 
 router.get('/sales/report', async (req, res, next) => {
+  try { res.json(await salesReport(reportFilters(req))); }
+  catch(e) { if(e instanceof ReportInputError) return res.status(400).json({message:e.message}); next(e); }
+});
+router.get('/sales/export', async (req, res, next) => {
   try {
-    const from = typeof req.query.from === 'string' && req.query.from ? req.query.from : null;
-    const to = typeof req.query.to === 'string' && req.query.to ? req.query.to : null;
-    const customerId = typeof req.query.customer_id === 'string' && req.query.customer_id ? req.query.customer_id : null;
-    const productId = typeof req.query.product_id === 'string' && req.query.product_id ? req.query.product_id : null;
-    const status = typeof req.query.status === 'string' ? req.query.status : 'all';
-    if (status !== 'all' && !['completed', 'cancelled'].includes(status)) return res.status(400).json({ message: 'Invalid sale status' });
-    if ((customerId && !validId(customerId)) || (productId && !validId(productId))) return res.status(400).json({ message: 'Invalid customer or product filter' });
-    if ((from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) || (to && !/^\d{4}-\d{2}-\d{2}$/.test(to)) || (from && to && from > to)) return res.status(400).json({ message: 'Invalid report date range' });
-    const where = `WHERE ($1::text IS NULL OR s.sale_date >= $1::date)
-      AND ($2::text IS NULL OR s.sale_date < ($2::date + interval '1 day'))
-      AND ($3::uuid IS NULL OR s.customer_id = $3)
-      AND ($4 = 'all' OR s.status = $4)
-      AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM sale_items filter_item WHERE filter_item.sale_id=s.id AND filter_item.product_id=$5))`;
-    const params = [from, to, customerId, status, productId];
-    const sales = await pool.query(`SELECT s.id,s.customer_id,c.full_name AS customer_name,c.company AS customer_company,
-      s.created_by,u.full_name AS seller_name,s.sale_date,s.status,s.subtotal,s.tax_total,s.total,s.notes,s.created_at,
-      (SELECT count(*)::integer FROM sale_items si WHERE si.sale_id=s.id) AS item_count
-      FROM sales s JOIN customers c ON c.id=s.customer_id JOIN users u ON u.id=s.created_by ${where}
-      ORDER BY s.sale_date DESC LIMIT 1000`, params);
-    const summary = await pool.query(`SELECT count(*) FILTER (WHERE s.status='completed')::integer AS sales_count,
-      COALESCE(sum(s.total) FILTER (WHERE s.status='completed'),0)::numeric(14,2) AS revenue,
-      COALESCE(avg(s.total) FILTER (WHERE s.status='completed'),0)::numeric(14,2) AS average_sale,
-      count(*) FILTER (WHERE s.status='cancelled')::integer AS cancelled_count
-      FROM sales s ${where}`, params);
-    res.json({ sales: sales.rows, summary: summary.rows[0] });
-  } catch (error) { next(error); }
+    const report=await salesReport(reportFilters(req),true);
+    res.setHeader('Content-Type','text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition','attachment; filename="orbit-sales.csv"');
+    res.send(reportCsv(report.sales,req.query.language==='es'));
+  } catch(e) { if(e instanceof ReportInputError) return res.status(400).json({message:e.message}); next(e); }
 });
 
 router.get('/sales/:id', async (req, res, next) => {
@@ -113,7 +87,9 @@ router.post('/sales', adminOnly, async (req: AuthRequest, res, next) => {
       for (const line of calculated) {
         await db.query(`INSERT INTO sale_items(sale_id,product_id,product_name,product_code,quantity,unit_price,tax_treatment,vat_rate,subtotal,tax_amount,total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [inserted.id,line.p.id,line.p.name,line.p.code,line.quantity,line.p.base_price,line.p.tax_treatment,line.p.vat_rate,line.lineSubtotal,line.tax,line.total]);
         if (line.p.kind === 'product' && line.p.tracks_inventory) {
-          await db.query(`INSERT INTO inventory_movements(id,product_id,actor_user_id,movement_type,quantity,before_stock,after_stock,reason) VALUES($1,$2,$3,'exit',$4,$5,$6,$7)`, [randomUUID(),line.p.id,req.user!.id,line.quantity,line.stock,line.stock-line.quantity,`Sale ${inserted.id}`]);
+          const movementId=randomUUID();
+          await db.query(`INSERT INTO inventory_movements(id,product_id,actor_user_id,movement_type,quantity,before_stock,after_stock,reason) VALUES($1,$2,$3,'exit',$4,$5,$6,$7)`, [movementId,line.p.id,req.user!.id,line.quantity,line.stock,line.stock-line.quantity,`Sale ${inserted.id}`]);
+          await db.query('UPDATE sale_items SET inventory_movement_id=$1 WHERE sale_id=$2 AND product_id=$3',[movementId,inserted.id,line.p.id]);
         }
       }
       return { status: 201, body: inserted };
@@ -130,11 +106,11 @@ router.post('/sales/:id/cancel', adminOnly, async (req: AuthRequest, res, next) 
       const sale = (await db.query('SELECT * FROM sales WHERE id=$1 FOR UPDATE', [id])).rows[0];
       if (!sale) return { status: 404, body: { message: 'Sale not found' } };
       if (sale.status === 'cancelled') return { status: 409, body: { message: 'Sale is already cancelled' } };
-      const items = (await db.query('SELECT si.*,p.kind,p.tracks_inventory FROM sale_items si JOIN products p ON p.id=si.product_id WHERE si.sale_id=$1 ORDER BY si.product_id FOR UPDATE OF p', [id])).rows;
-      for (const item of items) if (item.kind === 'product' && item.tracks_inventory) {
+      const items = (await db.query('SELECT si.*,m.quantity AS deducted_quantity FROM sale_items si JOIN products p ON p.id=si.product_id LEFT JOIN inventory_movements m ON m.id=si.inventory_movement_id WHERE si.sale_id=$1 ORDER BY si.product_id FOR UPDATE OF p', [id])).rows;
+      for (const item of items) if (item.inventory_movement_id) {
         const last = (await db.query('SELECT after_stock FROM inventory_movements WHERE product_id=$1 ORDER BY movement_order DESC LIMIT 1', [item.product_id])).rows[0];
-        const before = Number(last?.after_stock || 0); const after = before + Number(item.quantity);
-        await db.query(`INSERT INTO inventory_movements(id,product_id,actor_user_id,movement_type,quantity,before_stock,after_stock,reason) VALUES($1,$2,$3,'entry',$4,$5,$6,$7)`, [randomUUID(),item.product_id,req.user!.id,item.quantity,before,after,`Restock cancelled sale ${id}: ${reason.trim()}`]);
+        const before = Number(last?.after_stock || 0); const after = before + Number(item.deducted_quantity);
+        await db.query(`INSERT INTO inventory_movements(id,product_id,actor_user_id,movement_type,quantity,before_stock,after_stock,reason) VALUES($1,$2,$3,'entry',$4,$5,$6,$7)`, [randomUUID(),item.product_id,req.user!.id,item.deducted_quantity,before,after,`Restock cancelled sale ${id}: ${reason.trim()}`]);
       }
       const updated = (await db.query("UPDATE sales SET status='cancelled',updated_at=now() WHERE id=$1 RETURNING *", [id])).rows[0];
       return { status: 200, body: updated };
