@@ -35,6 +35,36 @@ router.get('/sales/summary', async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get('/sales/report', async (req, res, next) => {
+  try {
+    const from = typeof req.query.from === 'string' && req.query.from ? req.query.from : null;
+    const to = typeof req.query.to === 'string' && req.query.to ? req.query.to : null;
+    const customerId = typeof req.query.customer_id === 'string' && req.query.customer_id ? req.query.customer_id : null;
+    const productId = typeof req.query.product_id === 'string' && req.query.product_id ? req.query.product_id : null;
+    const status = typeof req.query.status === 'string' ? req.query.status : 'all';
+    if (status !== 'all' && !['completed', 'cancelled'].includes(status)) return res.status(400).json({ message: 'Invalid sale status' });
+    if ((customerId && !validId(customerId)) || (productId && !validId(productId))) return res.status(400).json({ message: 'Invalid customer or product filter' });
+    if ((from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) || (to && !/^\d{4}-\d{2}-\d{2}$/.test(to)) || (from && to && from > to)) return res.status(400).json({ message: 'Invalid report date range' });
+    const where = `WHERE ($1::text IS NULL OR s.sale_date >= $1::date)
+      AND ($2::text IS NULL OR s.sale_date < ($2::date + interval '1 day'))
+      AND ($3::uuid IS NULL OR s.customer_id = $3)
+      AND ($4 = 'all' OR s.status = $4)
+      AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM sale_items filter_item WHERE filter_item.sale_id=s.id AND filter_item.product_id=$5))`;
+    const params = [from, to, customerId, status, productId];
+    const sales = await pool.query(`SELECT s.id,s.customer_id,c.full_name AS customer_name,c.company AS customer_company,
+      s.created_by,u.full_name AS seller_name,s.sale_date,s.status,s.subtotal,s.tax_total,s.total,s.notes,s.created_at,
+      (SELECT count(*)::integer FROM sale_items si WHERE si.sale_id=s.id) AS item_count
+      FROM sales s JOIN customers c ON c.id=s.customer_id JOIN users u ON u.id=s.created_by ${where}
+      ORDER BY s.sale_date DESC LIMIT 1000`, params);
+    const summary = await pool.query(`SELECT count(*) FILTER (WHERE s.status='completed')::integer AS sales_count,
+      COALESCE(sum(s.total) FILTER (WHERE s.status='completed'),0)::numeric(14,2) AS revenue,
+      COALESCE(avg(s.total) FILTER (WHERE s.status='completed'),0)::numeric(14,2) AS average_sale,
+      count(*) FILTER (WHERE s.status='cancelled')::integer AS cancelled_count
+      FROM sales s ${where}`, params);
+    res.json({ sales: sales.rows, summary: summary.rows[0] });
+  } catch (error) { next(error); }
+});
+
 router.get('/sales/:id', async (req, res, next) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Invalid sale ID' });
   try {

@@ -8,6 +8,7 @@ import {
   Package,
   Boxes,
   ShoppingCart,
+  ChartNoAxesCombined,
   LayoutGrid,
   Users,
   CircleUserRound,
@@ -120,6 +121,7 @@ export default function Header() {
             <NavLink to="/products" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><Package size={20}/><span>{t("Catalog")}</span></NavLink>
             <NavLink to="/inventory" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><Boxes size={20}/><span>{t("Inventory")}</span></NavLink>
             <NavLink to="/sales" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><ShoppingCart size={20}/><span>{t("Sales")}</span></NavLink>
+            <NavLink to="/reports" onClick={handleCloseMenu} className={({isActive})=>`crm-header__nav-item ${isActive ? "is-active" : ""}`}><ChartNoAxesCombined size={20}/><span>{t("Reports")}</span></NavLink>
             {user?.role === "admin" && (
               <NavLink to="/users" onClick={handleCloseMenu}
                 className={({ isActive }) => `crm-header__nav-item ${isActive ? "is-active" : ""}`}>
